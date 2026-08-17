@@ -1,0 +1,53 @@
+{
+  "name": "Hardware & Silicon Engineering Tracker",
+  "short_name": "Hardware & Silicon",
+  "description": "Master curriculum, tools catalog, and 80+ semiconductor/embedded company internship pipeline tracker for VLSI, RISC-V, and Hardware Engineers.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#09090b",
+  "theme_color": "#0f172a",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "utilities", "developer"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Internship Pipeline",
+      "short_name": "Pipeline",
+      "description": "Explore 80+ Semiconductor and Embedded companies",
+      "url": "/#companies",
+      "icons": [{ "src": "/favicon.svg", "sizes": "64x64" }]
+    },
+    {
+      "name": "Curriculum Modules",
+      "short_name": "Curriculum",
+      "description": "Track VLSI, RISC-V and RTL curriculum progress",
+      "url": "/#curriculum",
+      "icons": [{ "src": "/favicon.svg", "sizes": "64x64" }]
+    },
+    {
+      "name": "Industry Tools",
+      "short_name": "Tools",
+      "description": "Explore open-source & commercial EDA / simulation toolchains",
+      "url": "/#tools",
+      "icons": [{ "src": "/favicon.svg", "sizes": "64x64" }]
+    }
+  ],
+  "screenshots": []
+}

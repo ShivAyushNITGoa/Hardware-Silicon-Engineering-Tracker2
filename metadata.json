@@ -1,0 +1,6 @@
+{
+  "name": "Hardware & Silicon Engineering Tracker",
+  "description": "Comprehensive progress tracker, curriculum breakdown, tools master, and semiconductor/embedded engineering internship roadmap.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
