@@ -80,8 +80,12 @@ const TAB_LABELS: Record<Tab, { title: string; category: string }> = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -107,7 +111,7 @@ export default function App() {
       // Toggle Sidebar (Ctrl+B or Cmd+B)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
-        setIsDesktopSidebarOpen(prev => !prev);
+        setIsSidebarOpen(prev => !prev);
       }
     };
 
@@ -129,7 +133,6 @@ export default function App() {
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    setIsMobileMenuOpen(false);
     // Smooth scroll to top of main container
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -244,88 +247,29 @@ export default function App() {
       {/* Main Layout Container */}
       <div className="flex-1 flex relative overflow-hidden">
         
-        {/* Mobile Slide-in Drawer Overlay */}
-        {isMobileMenuOpen && (
-          <div 
-            className="fixed inset-0 bg-neutral-900/50 z-40 md:hidden backdrop-blur-2xs animate-in fade-in duration-150"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-
-        {/* Mobile Slide-in Navigation Drawer */}
-        <div className={`fixed top-0 bottom-0 left-0 w-72 bg-white z-50 shadow-2xl md:hidden transform transition-transform duration-200 ease-in-out flex flex-col ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        {/* Collapsible Left Navigation Sidebar (Visible on both mobile & desktop) */}
+        <aside className={`flex flex-col bg-white border-r border-neutral-200 shrink-0 sticky top-[49px] h-[calc(100vh-49px)] overflow-y-auto z-20 transition-all duration-200 shadow-2xs ${
+          isSidebarOpen ? 'w-56 sm:w-64' : 'w-14 sm:w-16'
         }`}>
-          <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs">
-                H
-              </div>
-              <div>
-                <h2 className="text-xs font-bold text-neutral-900">Hardware &amp; Silicon</h2>
-                <p className="text-[10px] text-neutral-500 font-medium">Engineering Progress &amp; Pipeline Tracker</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="p-3 flex-1 overflow-y-auto space-y-1">
-            {renderNavItems(activeTab, handleTabChange)}
-          </div>
-
-          <div className="p-3 border-t border-neutral-100 bg-neutral-50/70 space-y-2">
-            {!isInstalled && (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  setIsInstallModalOpen(true);
-                }}
-                className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-xs font-bold shadow-xs hover:from-cyan-500 hover:to-blue-500 transition-all cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>Install PWA App</span>
-              </button>
-            )}
-
-            <div className="p-2.5 rounded-xl bg-white border border-neutral-200/80">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900 mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                Target Role
-              </div>
-              <p className="text-[11px] text-neutral-600">
-                RTL Design • UVM Verification • FPGA • Embedded Linux
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop Collapsible Left Sidebar */}
-        <aside className={`hidden md:flex flex-col bg-white border-r border-neutral-200 flex-shrink-0 sticky top-[49px] h-[calc(100vh-49px)] overflow-y-auto z-20 transition-all duration-200 shadow-2xs ${
-          isDesktopSidebarOpen ? 'w-64' : 'w-16'
-        }`}>
-          <div className="p-3 flex flex-col h-full justify-between">
-            <div className="space-y-4">
+          <div className="p-2 sm:p-3 flex flex-col h-full justify-between">
+            <div className="space-y-3 sm:space-y-4">
               {/* Sidebar Header & Toggle Button */}
-              <div className={`flex items-center ${isDesktopSidebarOpen ? 'justify-between' : 'justify-center'} px-1`}>
-                {isDesktopSidebarOpen ? (
+              <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} px-1`}>
+                {isSidebarOpen ? (
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
-                      Navigation Menu
+                      Navigation
                     </span>
                   </div>
                 ) : null}
                 
                 <button
-                  onClick={() => setIsDesktopSidebarOpen(prev => !prev)}
-                  className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
-                  title={isDesktopSidebarOpen ? 'Collapse sidebar (Ctrl+B)' : 'Expand sidebar (Ctrl+B)'}
+                  onClick={() => setIsSidebarOpen(prev => !prev)}
+                  className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                  title={isSidebarOpen ? 'Collapse sidebar (Ctrl+B)' : 'Expand sidebar (Ctrl+B)'}
+                  aria-label="Toggle navigation sidebar"
                 >
-                  {isDesktopSidebarOpen ? (
+                  {isSidebarOpen ? (
                     <PanelLeftClose className="w-4 h-4" />
                   ) : (
                     <PanelLeftOpen className="w-4 h-4" />
@@ -335,20 +279,20 @@ export default function App() {
               
               {/* Nav Items */}
               <nav className="space-y-1">
-                {renderNavItems(activeTab, handleTabChange, !isDesktopSidebarOpen)}
+                {renderNavItems(activeTab, handleTabChange, !isSidebarOpen)}
               </nav>
             </div>
 
             {/* Bottom Target Card (Visible when expanded) */}
-            {isDesktopSidebarOpen ? (
-              <div className="pt-4 border-t border-neutral-100">
-                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 space-y-1">
+            {isSidebarOpen ? (
+              <div className="pt-3 sm:pt-4 border-t border-neutral-100">
+                <div className="bg-neutral-50 p-2.5 sm:p-3 rounded-xl border border-neutral-200/80 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    Target Role Mission
+                    Target Mission
                   </div>
-                  <p className="text-[11px] text-neutral-600 leading-snug">
-                    RTL Design &bull; ASIC Verification &bull; FPGA &bull; Embedded Firmware
+                  <p className="text-[10px] sm:text-[11px] text-neutral-600 leading-snug">
+                    RTL Design &bull; Verification &bull; FPGA &bull; Embedded
                   </p>
                 </div>
               </div>
@@ -518,8 +462,9 @@ const NavItem: React.FC<NavItemProps> = ({
   return (
     <button
       onClick={onClick}
-      title={isCompact ? label : undefined}
-      className={`w-full flex items-center ${isCompact ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2.5'} rounded-xl text-xs font-semibold transition-all ${
+      title={label}
+      aria-label={label}
+      className={`w-full flex items-center ${isCompact ? 'justify-center p-2.5' : 'justify-between px-3 py-2.5'} rounded-xl text-xs font-semibold transition-all cursor-pointer ${
         active 
           ? 'bg-neutral-900 text-white shadow-xs' 
           : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
