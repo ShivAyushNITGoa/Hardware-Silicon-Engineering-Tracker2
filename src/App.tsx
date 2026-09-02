@@ -30,13 +30,15 @@ import {
   GraduationCap,
   Download,
   WifiOff,
-  RefreshCw
+  RefreshCw,
+  Cpu
 } from 'lucide-react';
 
 import { usePWA } from './hooks/usePWA';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { DashboardOverview } from './components/DashboardOverview';
 import { CurriculumView } from './components/CurriculumView';
+import { CareerPrepRoadmapView } from './components/CareerPrepRoadmapView';
 import { CompaniesPipelineView } from './components/CompaniesPipelineView';
 import { InstitutionsResearchView } from './components/InstitutionsResearchView';
 import { ToolsMasterView } from './components/ToolsMasterView';
@@ -51,6 +53,7 @@ import { CommandPaletteModal } from './components/CommandPaletteModal';
 
 export type Tab = 
   | 'dashboard' 
+  | 'career_prep'
   | 'curriculum' 
   | 'planner'
   | 'projects' 
@@ -65,6 +68,7 @@ export type Tab =
 
 const TAB_LABELS: Record<Tab, { title: string; category: string }> = {
   dashboard: { title: 'Command Center', category: 'Executive Overview' },
+  career_prep: { title: 'Career Prep Dashboard', category: '10 Tracks & Free Platforms' },
   curriculum: { title: 'Curriculum & 15 Subtopics', category: 'Technical Foundation' },
   planner: { title: '20-Week Master Plan', category: 'Milestones & Sunday Gates' },
   projects: { title: 'Flagship Projects', category: 'Silicon & Embedded Builds' },
@@ -314,6 +318,12 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'career_prep' && (
+            <div className="animate-in fade-in duration-200">
+              <CareerPrepRoadmapView />
+            </div>
+          )}
+
           {activeTab === 'curriculum' && (
             <div className="animate-in fade-in duration-200">
               <CurriculumView />
@@ -415,6 +425,7 @@ function renderNavItems(
     badge?: string;
   }> = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-4 h-4 shrink-0" />, label: 'Command Center', badge: 'Overview' },
+    { id: 'career_prep', icon: <Cpu className="w-4 h-4 shrink-0 text-cyan-600" />, label: 'Career Prep Roadmap', badge: '10 Tracks' },
     { id: 'curriculum', icon: <BookOpen className="w-4 h-4 shrink-0" />, label: 'Curriculum & Subtopics', badge: '15 Tracks' },
     { id: 'planner', icon: <Calendar className="w-4 h-4 shrink-0" />, label: '20-Week Master Plan', badge: 'Sunday Gate' },
     { id: 'projects', icon: <Rocket className="w-4 h-4 shrink-0" />, label: 'Flagship Projects', badge: '4 Builds' },

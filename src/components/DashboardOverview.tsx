@@ -12,14 +12,16 @@ import {
   Clock, 
   ShieldCheck, 
   TrendingUp,
-  GraduationCap
+  GraduationCap,
+  Cpu
 } from 'lucide-react';
 import { initialCurriculum } from '../data/curriculumData';
 import { initialCompanies } from '../data/companiesData';
 import { initialTools } from '../data/toolsData';
 import { flagshipProjects } from '../data/projectsData';
 import { initialInstitutions } from '../data/institutionsData';
-import { getCheckedSubtopics, getCompaniesOverrides, getCheckedToolSkills, getDailyHabitsLog, getInstitutionsOverrides } from '../utils/storage';
+import { initialCareerPrepTracks } from '../data/careerPrepData';
+import { getCheckedSubtopics, getCompaniesOverrides, getCheckedToolSkills, getDailyHabitsLog, getInstitutionsOverrides, getCheckedCareerTasks } from '../utils/storage';
 
 interface DashboardOverviewProps {
   onNavigate: (tab: any) => void;
@@ -208,17 +210,30 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
       </div>
 
       {/* Quick Launchpad to Key Features */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+        <div 
+          onClick={() => onNavigate('career_prep')}
+          className="p-4 rounded-xl border border-cyan-200 bg-cyan-50/60 hover:bg-cyan-50 hover:border-cyan-300 hover:shadow-sm transition-all cursor-pointer group"
+        >
+          <div className="flex items-center gap-2 text-xs font-bold text-cyan-900">
+            <Cpu className="w-4 h-4 text-cyan-600" />
+            <span>Career Prep Roadmap</span>
+          </div>
+          <p className="text-[11px] text-cyan-950/80 mt-1">
+            10 Tracks: ASIC, UVM, FPGA, RISC-V, Embedded, Networking, Analog.
+          </p>
+        </div>
+
         <div 
           onClick={() => onNavigate('institutions')}
           className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer group"
         >
           <div className="flex items-center gap-2 text-xs font-bold text-indigo-800">
             <GraduationCap className="w-4 h-4 text-indigo-600" />
-            <span>IITs, NITs & Research Labs</span>
+            <span>IITs, NITs & Research</span>
           </div>
           <p className="text-[11px] text-indigo-900/80 mt-1">
-            {initialInstitutions.length} premier programs: Shakti RISC-V, CeNSE Fab, DRDO, SPARK & SURGE.
+            {initialInstitutions.length} premier programs: Shakti, CeNSE, DRDO & SPARK.
           </p>
         </div>
 

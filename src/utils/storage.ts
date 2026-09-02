@@ -20,6 +20,7 @@ import { interviewQuestions } from '../data/interviewQuestionsData';
 import { initialInstitutions } from '../data/institutionsData';
 import { coldOutreachTemplates } from '../data/outreachData';
 import { weeklyMilestones } from '../data/weeklyPlanData';
+import { CareerPrepTrack, initialCareerPrepTracks } from '../data/careerPrepData';
 
 const STORAGE_KEYS = {
   CHECKED_SUBTOPICS: 'ayush_tracker_checked_subtopics',
@@ -41,7 +42,10 @@ const STORAGE_KEYS = {
   INTERVIEW_STATUS: 'ayush_tracker_interview_status',
   SUNDAY_AUDIT_LOGS: 'ayush_tracker_sunday_audit_logs',
   WEEKLY_MILESTONES: 'ayush_tracker_weekly_milestones',
-  INSTITUTIONS_OVERRIDE: 'ayush_tracker_institutions_override'
+  INSTITUTIONS_OVERRIDE: 'ayush_tracker_institutions_override',
+  CAREER_PREP_TASKS: 'ayush_tracker_career_prep_tasks',
+  CAREER_PREP_PROJECTS: 'ayush_tracker_career_prep_projects',
+  CUSTOM_CAREER_PREP_TRACKS: 'ayush_tracker_custom_career_prep_tracks_v1'
 };
 
 // --- Checkboxes & Micro Progress Trackers ---
@@ -473,3 +477,67 @@ export function resetStoredRules(): RuleItem[] {
   } catch (e) {}
   return goldenRules;
 }
+
+// 11. Career Prep Tracks & Tasks
+export function getCheckedCareerTasks(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CAREER_PREP_TASKS);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveCheckedCareerTasks(data: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CAREER_PREP_TASKS, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save career prep tasks', e);
+  }
+}
+
+export function getCheckedCareerProjects(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CAREER_PREP_PROJECTS);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveCheckedCareerProjects(data: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CAREER_PREP_PROJECTS, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save career prep projects', e);
+  }
+}
+
+export function getStoredCareerPrepTracks(): CareerPrepTrack[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_CAREER_PREP_TRACKS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to read career prep tracks', e);
+  }
+  return initialCareerPrepTracks;
+}
+
+export function saveStoredCareerPrepTracks(list: CareerPrepTrack[]) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_CAREER_PREP_TRACKS, JSON.stringify(list));
+  } catch (e) {
+    console.error('Failed to save career prep tracks', e);
+  }
+}
+
+export function resetStoredCareerPrepTracks(): CareerPrepTrack[] {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_CAREER_PREP_TRACKS);
+  } catch (e) {}
+  return initialCareerPrepTracks;
+}
+
