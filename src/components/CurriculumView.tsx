@@ -20,7 +20,8 @@ import {
   X,
   Save,
   Layers,
-  FileText
+  FileText,
+  CheckCheck
 } from 'lucide-react';
 import { CurriculumTrack, ConceptTopic, SubTopic, PriorityLevel } from '../types';
 import { 
@@ -99,6 +100,24 @@ export const CurriculumView: React.FC = () => {
       ...prev,
       [topicId]: !prev[topicId]
     }));
+  };
+
+  const toggleExpandCollapseAll = (expand: boolean) => {
+    const nextState: Record<string, boolean> = {};
+    activeTrack.topics.forEach(tp => {
+      nextState[tp.id] = expand;
+    });
+    setExpandedTopics(nextState);
+  };
+
+  const toggleTopicAllSubtopics = (topic: ConceptTopic, shouldCheck: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextState = { ...checkedSubtopics };
+    topic.subtopics.forEach(st => {
+      nextState[st.id] = shouldCheck;
+    });
+    setCheckedSubtopics(nextState);
+    saveCheckedSubtopics(nextState);
   };
 
   // Calculate Overall Statistics
@@ -517,39 +536,58 @@ export const CurriculumView: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-lg border border-neutral-200 w-full sm:w-auto overflow-x-auto">
-          <button
-            onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              filterMode === 'all' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            All Topics ({activeTrack.topics.length})
-          </button>
-          <button
-            onClick={() => setFilterMode('incomplete')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              filterMode === 'incomplete' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            In Progress
-          </button>
-          <button
-            onClick={() => setFilterMode('completed')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              filterMode === 'completed' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Completed
-          </button>
-          <button
-            onClick={() => setFilterMode('exit_gates')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              filterMode === 'exit_gates' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Exit Gates Only
-          </button>
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-lg border border-neutral-200 overflow-x-auto">
+            <button
+              onClick={() => setFilterMode('all')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                filterMode === 'all' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              All Topics ({activeTrack.topics.length})
+            </button>
+            <button
+              onClick={() => setFilterMode('incomplete')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                filterMode === 'incomplete' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              In Progress
+            </button>
+            <button
+              onClick={() => setFilterMode('completed')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                filterMode === 'completed' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Completed
+            </button>
+            <button
+              onClick={() => setFilterMode('exit_gates')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                filterMode === 'exit_gates' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Exit Gates
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => toggleExpandCollapseAll(true)}
+              className="text-[11px] px-2 py-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 font-medium cursor-pointer"
+              title="Expand all topics"
+            >
+              Expand All
+            </button>
+            <button
+              onClick={() => toggleExpandCollapseAll(false)}
+              className="text-[11px] px-2 py-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 font-medium cursor-pointer"
+              title="Collapse all topics"
+            >
+              Collapse
+            </button>
+          </div>
         </div>
       </div>
 
@@ -610,10 +648,23 @@ export const CurriculumView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
                     <span className="text-xs font-semibold text-neutral-700 bg-white px-2.5 py-1 rounded-md border border-neutral-200">
                       {topicCompletedCount}/{topicTotalCount} Subtopics
                     </span>
+
+                    <button
+                      onClick={(e) => toggleTopicAllSubtopics(topic, !isTopicAllDone, e)}
+                      className={`text-xs px-2.5 py-1 rounded-md font-semibold border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                        isTopicAllDone
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                      }`}
+                      title={isTopicAllDone ? 'Uncheck all subtopics in this topic' : 'Mark all subtopics in this topic as complete'}
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{isTopicAllDone ? 'Reset Topic' : 'Check All'}</span>
+                    </button>
 
                     {/* Edit and Delete Topic buttons */}
                     <button

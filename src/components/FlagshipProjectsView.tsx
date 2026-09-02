@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Rocket, 
   CheckSquare, 
@@ -16,7 +16,10 @@ import {
   Trash2,
   X,
   Save,
-  RotateCcw
+  RotateCcw,
+  Search,
+  Filter,
+  CheckCheck
 } from 'lucide-react';
 import { FlagshipProject } from '../types';
 import { 
@@ -49,6 +52,8 @@ const BLANK_PROJECT: FlagshipProject = {
 export const FlagshipProjectsView: React.FC = () => {
   const [projectsList, setProjectsList] = useState<FlagshipProject[]>(() => getStoredProjects());
   const [copiedBulletId, setCopiedBulletId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Shipped'>('All');
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>(() => {
     try {
       const raw = localStorage.getItem('ayush_tracker_project_steps');
@@ -66,6 +71,19 @@ export const FlagshipProjectsView: React.FC = () => {
 
   const toggleStep = (key: string) => {
     const nextState = { ...completedSteps, [key]: !completedSteps[key] };
+    setCompletedSteps(nextState);
+    try {
+      localStorage.setItem('ayush_tracker_project_steps', JSON.stringify(nextState));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleAllProjectSteps = (project: FlagshipProject, shouldCheck: boolean) => {
+    const nextState = { ...completedSteps };
+    project.steps.forEach((_, idx) => {
+      nextState[`${project.id}_step_${idx}`] = shouldCheck;
+    });
     setCompletedSteps(nextState);
     try {
       localStorage.setItem('ayush_tracker_project_steps', JSON.stringify(nextState));
@@ -140,13 +158,46 @@ export const FlagshipProjectsView: React.FC = () => {
     }
   };
 
+  let totalStepsAcrossProjects = 0;
+  let completedStepsAcrossProjects = 0;
+  projectsList.forEach(p => {
+    p.steps.forEach((_, idx) => {
+      totalStepsAcrossProjects += 1;
+      if (completedSteps[`${p.id}_step_${idx}`]) completedStepsAcrossProjects += 1;
+    });
+  });
+  const overallPercent = totalStepsAcrossProjects > 0 ? Math.round((completedStepsAcrossProjects / totalStepsAcrossProjects) * 100) : 0;
+
+  const filteredProjects = useMemo(() => {
+    return projectsList.filter(p => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q ||
+        p.name.toLowerCase().includes(q) ||
+        p.purpose.toLowerCase().includes(q) ||
+        p.prerequisites.toLowerCase().includes(q) ||
+        p.architectureFlow.toLowerCase().includes(q) ||
+        p.steps.some(s => s.toLowerCase().includes(q)) ||
+        p.metrics.toLowerCase().includes(q);
+
+      const stepKeys = p.steps.map((_, idx) => `${p.id}_step_${idx}`);
+      const doneCount = stepKeys.filter(k => completedSteps[k]).length;
+      const isShipped = doneCount === p.steps.length && p.steps.length > 0;
+
+      const matchStatus = statusFilter === 'All' ||
+        (statusFilter === 'Shipped' && isShipped) ||
+        (statusFilter === 'Active' && !isShipped);
+
+      return matchSearch && matchStatus;
+    });
+  }, [projectsList, searchQuery, statusFilter, completedSteps]);
+
   return (
     <div className="space-y-6">
       {/* Header Card */}
       <div className="bg-white rounded-xl border border-neutral-200 p-5 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center shrink-0">
               <Rocket className="w-5 h-5" />
             </div>
             <div>
@@ -159,7 +210,22 @@ export const FlagshipProjectsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-3 bg-neutral-50 px-4 py-2.5 rounded-lg border border-neutral-200">
+              <div>
+                <div className="text-xs text-neutral-500 font-medium">Implementation Milestones</div>
+                <div className="text-lg font-bold text-neutral-900">
+                  {completedStepsAcrossProjects} / {totalStepsAcrossProjects} ({overallPercent}%)
+                </div>
+              </div>
+              <div className="w-16 bg-neutral-200 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-emerald-500 h-full rounded-full transition-all"
+                  style={{ width: `${overallPercent}%` }}
+                />
+              </div>
+            </div>
+
             <button
               onClick={handleOpenAdd}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
@@ -180,56 +246,107 @@ export const FlagshipProjectsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search architecture, verification, metrics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900 text-neutral-900 placeholder:text-neutral-400"
+            />
+          </div>
+
+          {/* Status Filter Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
+            <span className="text-[11px] font-semibold text-neutral-500 mr-1">Status:</span>
+            {(['All', 'Active', 'Shipped'] as const).map(st => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  statusFilter === st
+                    ? 'bg-neutral-900 text-white shadow-2xs'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900'
+                }`}
+              >
+                {st === 'All' ? `All (${projectsList.length})` : st === 'Active' ? '🛠️ In Progress' : '🚀 Shipped'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Projects List */}
       <div className="space-y-6">
-        {projectsList.map((project, pIdx) => {
-          const stepKeys = project.steps.map((_, idx) => `${project.id}_step_${idx}`);
-          const doneCount = stepKeys.filter(k => completedSteps[k]).length;
-          const totalCount = project.steps.length;
-          const isAllDone = doneCount === totalCount && totalCount > 0;
+        {filteredProjects.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-xl p-12 text-center text-neutral-500">
+            <Rocket className="w-8 h-8 mx-auto mb-2 text-neutral-400" />
+            <p className="text-sm font-semibold">No engineering projects match your criteria.</p>
+            <button
+              onClick={() => { setSearchQuery(''); setStatusFilter('All'); }}
+              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-bold"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          filteredProjects.map((project, pIdx) => {
+            const stepKeys = project.steps.map((_, idx) => `${project.id}_step_${idx}`);
+            const doneCount = stepKeys.filter(k => completedSteps[k]).length;
+            const totalCount = project.steps.length;
+            const isAllDone = doneCount === totalCount && totalCount > 0;
 
-          return (
-            <div key={project.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-              {/* Card Header */}
-              <div className="p-5 bg-neutral-50/80 border-b border-neutral-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs px-2 py-0.5 rounded bg-neutral-900 text-white font-bold">
-                      Flagship #{pIdx + 1}
-                    </span>
-                    <h3 className="text-lg font-bold text-neutral-900">{project.name}</h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
-                      {project.targetWeek}
-                    </span>
+            return (
+              <div key={project.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+                {/* Card Header */}
+                <div className="p-4 sm:p-5 bg-neutral-50/80 border-b border-neutral-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs px-2 py-0.5 rounded bg-neutral-900 text-white font-bold">
+                        Flagship #{pIdx + 1}
+                      </span>
+                      <h3 className="text-lg font-bold text-neutral-900">{project.name}</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                        {project.targetWeek}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-600 mt-1">{project.purpose}</p>
                   </div>
-                  <p className="text-xs text-neutral-600 mt-1">{project.purpose}</p>
-                </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded bg-white border border-neutral-200 text-neutral-700">
-                    {doneCount}/{totalCount} Milestones Done
-                  </span>
-                  {isAllDone && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
-                      Shipped
-                    </span>
-                  )}
-                  <button
-                    onClick={() => handleOpenEdit(project)}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
-                    title="Edit project"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteProject(project.id, project.name)}
-                    className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
-                    title="Delete project"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => toggleAllProjectSteps(project, !isAllDone)}
+                      className={`text-xs px-2.5 py-1 rounded font-semibold border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                        isAllDone
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                      }`}
+                      title={isAllDone ? 'Uncheck all steps' : 'Mark all steps completed'}
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span>{isAllDone ? 'Shipped (All Done)' : `${doneCount}/${totalCount} Steps`}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenEdit(project)}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
+                      title="Edit project"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(project.id, project.name)}
+                      className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                      title="Delete project"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
               {/* Card Content */}
               <div className="p-5 space-y-5">
@@ -323,7 +440,7 @@ export const FlagshipProjectsView: React.FC = () => {
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
 
       {/* Add / Edit Project Modal */}

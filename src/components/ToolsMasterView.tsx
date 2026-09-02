@@ -16,7 +16,10 @@ import {
   Trash2,
   X,
   Save,
-  RotateCcw
+  RotateCcw,
+  Search,
+  Filter,
+  CheckCheck
 } from 'lucide-react';
 import { ToolItem, ToolSkill } from '../types';
 import { 
@@ -48,6 +51,9 @@ export const ToolsMasterView: React.FC = () => {
   const [toolsList, setToolsList] = useState<ToolItem[]>(() => getStoredTools());
   const [checkedSkills, setCheckedSkills] = useState<Record<string, boolean>>(() => getCheckedToolSkills());
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [filterStatus, setFilterStatus] = useState<'All' | 'Mastered' | 'Pending'>('All');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,6 +67,15 @@ export const ToolsMasterView: React.FC = () => {
       ...checkedSkills,
       [skillId]: !checkedSkills[skillId]
     };
+    setCheckedSkills(nextState);
+    saveCheckedToolSkills(nextState);
+  };
+
+  const toggleAllToolSkills = (tool: ToolItem, shouldCheck: boolean) => {
+    const nextState = { ...checkedSkills };
+    tool.keySkillsToMaster.forEach(s => {
+      nextState[s.id] = shouldCheck;
+    });
     setCheckedSkills(nextState);
     saveCheckedToolSkills(nextState);
   };
@@ -175,6 +190,31 @@ export const ToolsMasterView: React.FC = () => {
   });
   const percent = totalSkills > 0 ? Math.round((doneSkills / totalSkills) * 100) : 0;
 
+  const toolCategories = useMemo(() => {
+    return ['All', ...Array.from(new Set(toolsList.map(t => t.category))).sort()];
+  }, [toolsList]);
+
+  const filteredTools = useMemo(() => {
+    return toolsList.filter(t => {
+      const matchCat = selectedCategory === 'All' || t.category === selectedCategory;
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q || 
+        t.name.toLowerCase().includes(q) || 
+        t.description.toLowerCase().includes(q) || 
+        t.coreConcepts.some(c => c.toLowerCase().includes(q)) ||
+        t.keySkillsToMaster.some(s => s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)) ||
+        (t.installOrRunCommand && t.installOrRunCommand.toLowerCase().includes(q));
+
+      const toolDoneCount = t.keySkillsToMaster.filter(s => checkedSkills[s.id]).length;
+      const isMastered = toolDoneCount === t.keySkillsToMaster.length && t.keySkillsToMaster.length > 0;
+      const matchStatus = filterStatus === 'All' || 
+        (filterStatus === 'Mastered' && isMastered) || 
+        (filterStatus === 'Pending' && !isMastered);
+
+      return matchCat && matchSearch && matchStatus;
+    });
+  }, [toolsList, selectedCategory, searchQuery, filterStatus, checkedSkills]);
+
   return (
     <div className="space-y-6">
       {/* Header Card */}
@@ -224,56 +264,133 @@ export const ToolsMasterView: React.FC = () => {
         </div>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search tools, commands, skills (Vivado, vsim, lint)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900 text-neutral-900 placeholder:text-neutral-400"
+            />
+          </div>
+
+          {/* Category Dropdown on Mobile / Pills on Desktop */}
+          <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
+            <div className="flex items-center gap-1 text-xs text-neutral-500 mr-1">
+              <Filter className="w-3.5 h-3.5" />
+              <span>Category:</span>
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-2.5 py-1.5 border border-neutral-200 rounded-lg text-xs bg-neutral-50 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+            >
+              {toolCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Status Filter Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-neutral-100">
+          <span className="text-[11px] font-semibold text-neutral-500 mr-1">Status:</span>
+          {(['All', 'Pending', 'Mastered'] as const).map(st => (
+            <button
+              key={st}
+              onClick={() => setFilterStatus(st)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                filterStatus === st
+                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900'
+              }`}
+            >
+              {st === 'All' ? `All Tools (${toolsList.length})` : st === 'Pending' ? '🟡 In Progress' : '🟢 Mastered'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Tools Grid */}
       <div className="space-y-5">
-        {toolsList.map(tool => {
-          const toolDoneCount = tool.keySkillsToMaster.filter(s => checkedSkills[s.id]).length;
-          const toolTotal = tool.keySkillsToMaster.length;
+        {filteredTools.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-xl p-12 text-center text-neutral-500">
+            <Wrench className="w-8 h-8 mx-auto mb-2 text-neutral-400" />
+            <p className="text-sm font-semibold">No tools match your filter criteria.</p>
+            <p className="text-xs mt-1">Try resetting the search or category filters.</p>
+            <button
+              onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setFilterStatus('All'); }}
+              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-bold"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          filteredTools.map(tool => {
+            const toolDoneCount = tool.keySkillsToMaster.filter(s => checkedSkills[s.id]).length;
+            const toolTotal = tool.keySkillsToMaster.length;
+            const allChecked = toolDoneCount === toolTotal && toolTotal > 0;
 
-          return (
-            <div key={tool.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-              {/* Tool Header */}
-              <div className="p-4.5 bg-neutral-50 border-b border-neutral-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-neutral-900">{tool.name}</h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded bg-neutral-200 text-neutral-800 font-semibold">
-                      {tool.category}
-                    </span>
+            return (
+              <div key={tool.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+                {/* Tool Header */}
+                <div className="p-4.5 bg-neutral-50 border-b border-neutral-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-bold text-neutral-900">{tool.name}</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded bg-neutral-200 text-neutral-800 font-semibold">
+                        {tool.category}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-600 mt-1">{tool.description}</p>
                   </div>
-                  <p className="text-xs text-neutral-600 mt-1">{tool.description}</p>
-                </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded bg-white border border-neutral-200 text-neutral-700">
-                    {toolDoneCount}/{toolTotal} Skills Checked
-                  </span>
-                  {tool.officialUrl && (
-                    <a
-                      href={tool.officialUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs px-2.5 py-1 rounded bg-neutral-900 hover:bg-neutral-800 text-white font-medium inline-flex items-center gap-1"
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => toggleAllToolSkills(tool, !allChecked)}
+                      className={`text-xs px-2.5 py-1 rounded font-semibold border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                        allChecked
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                      }`}
+                      title={allChecked ? 'Uncheck all skills' : 'Mark all skills done'}
                     >
-                      <ExternalLink className="w-3 h-3" /> Docs
-                    </a>
-                  )}
-                  <button
-                    onClick={() => handleOpenEdit(tool)}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
-                    title="Edit tool"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTool(tool.id, tool.name)}
-                    className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
-                    title="Delete tool"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span>{allChecked ? 'All Done' : `${toolDoneCount}/${toolTotal} Done`}</span>
+                    </button>
+
+                    {tool.officialUrl && (
+                      <a
+                        href={tool.officialUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-2.5 py-1 rounded bg-neutral-900 hover:bg-neutral-800 text-white font-medium inline-flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Docs
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleOpenEdit(tool)}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors cursor-pointer"
+                      title="Edit tool"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTool(tool.id, tool.name)}
+                      className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                      title="Delete tool"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
               {/* Tool Body */}
               <div className="p-5 space-y-4">
@@ -353,7 +470,7 @@ export const ToolsMasterView: React.FC = () => {
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
 
       {/* Add / Edit Tool Modal */}
@@ -401,7 +518,7 @@ export const ToolsMasterView: React.FC = () => {
                   <input
                     type="text"
                     value={formState.category}
-                    onChange={(e) => setFormState({ ...formState, category: e.target.value })}
+                    onChange={(e) => setFormState({ ...formState, category: e.target.value as ToolItem['category'] })}
                     placeholder="e.g. Simulation & Verification / ASIC Backend"
                     className="w-full text-xs p-2.5 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
                   />

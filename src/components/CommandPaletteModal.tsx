@@ -16,7 +16,8 @@ import {
   X,
   Sparkles,
   GraduationCap,
-  Cpu
+  Cpu,
+  Library
 } from 'lucide-react';
 import { initialCurriculum } from '../data/curriculumData';
 import { initialCompanies } from '../data/companiesData';
@@ -24,6 +25,7 @@ import { initialTools } from '../data/toolsData';
 import { flagshipProjects } from '../data/projectsData';
 import { initialInstitutions } from '../data/institutionsData';
 import { initialCareerPrepTracks, initialProjectTrackerItems } from '../data/careerPrepData';
+import { encyclopediaVolumes } from '../data/encyclopediaData';
 import { Tab } from '../App';
 
 interface CommandPaletteModalProps {
@@ -36,7 +38,7 @@ interface SearchItem {
   id: string;
   title: string;
   subtitle: string;
-  category: 'Tabs' | 'Curriculum Track' | 'Company' | 'EDA Tool' | 'Project' | 'Research Fellowship' | 'Career Prep Track';
+  category: 'Tabs' | 'Curriculum Track' | 'Company' | 'EDA Tool' | 'Project' | 'Research Fellowship' | 'Career Prep Track' | 'Encyclopedia Volume';
   tab: Tab;
   icon: React.ReactNode;
   badge?: string;
@@ -67,6 +69,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     // Tabs
     { id: 'tab-dash', title: 'Command Center Dashboard', subtitle: 'Overall progress, metrics, and sprint status', category: 'Tabs', tab: 'dashboard', icon: <LayoutDashboard className="w-4 h-4" />, badge: 'Overview' },
     { id: 'tab-career', title: 'Semiconductor Career Preparation Dashboard', subtitle: '10 Tracks: ASIC, UVM, FPGA, Embedded, RISC-V, Networking, Auto, Analog', category: 'Tabs', tab: 'career_prep', icon: <Cpu className="w-4 h-4 text-cyan-600" />, badge: '10 Tracks' },
+    { id: 'tab-encyclopedia', title: 'Complete Semiconductor Engineering Encyclopedia', subtitle: '18 Volumes: Fundamentals, Devices, IC Design, Fabrication, EDA Tools, Glossary, Roadmap', category: 'Tabs', tab: 'encyclopedia', icon: <Library className="w-4 h-4 text-indigo-600" />, badge: '18 Volumes' },
     { id: 'tab-curr', title: 'Curriculum & 15 Subtopic Tracks', subtitle: 'Digital Logic, Verilog, RISC-V, UVM, Embedded Linux, PD', category: 'Tabs', tab: 'curriculum', icon: <BookOpen className="w-4 h-4" />, badge: '15 Tracks' },
     { id: 'tab-plan', title: '20-Week Master Plan & Sunday Gates', subtitle: 'Week-by-week execution roadmap and exit gates', category: 'Tabs', tab: 'planner', icon: <Calendar className="w-4 h-4" />, badge: 'Execution' },
     { id: 'tab-proj', title: 'Flagship Silicon & Embedded Projects', subtitle: 'RISC-V Core, UVM Environment, Telemetry Node, TinyML', category: 'Tabs', tab: 'projects', icon: <Rocket className="w-4 h-4" />, badge: '4 Builds' },
@@ -99,6 +102,17 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       tab: 'career_prep' as Tab,
       icon: <Cpu className="w-4 h-4 text-cyan-600" />,
       badge: `${track.tasks.length} Checkpoints`
+    })),
+
+    // Encyclopedia Volumes
+    ...encyclopediaVolumes.map(vol => ({
+      id: `vol-${vol.id}`,
+      title: vol.name,
+      subtitle: vol.isFile ? 'Root Encyclopedia Document' : `Semiconductor Engineering Module • ${vol.folder}`,
+      category: 'Encyclopedia Volume' as const,
+      tab: 'encyclopedia' as Tab,
+      icon: <Library className="w-4 h-4 text-indigo-600" />,
+      badge: 'Encyclopedia'
     })),
 
     // Projects

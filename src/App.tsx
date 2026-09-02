@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard,
   BookOpen, 
@@ -31,7 +31,11 @@ import {
   Download,
   WifiOff,
   RefreshCw,
-  Cpu
+  Cpu,
+  Library,
+  CheckCircle2,
+  Flame,
+  Grid
 } from 'lucide-react';
 
 import { usePWA } from './hooks/usePWA';
@@ -39,6 +43,7 @@ import { PWAInstallModal } from './components/PWAInstallModal';
 import { DashboardOverview } from './components/DashboardOverview';
 import { CurriculumView } from './components/CurriculumView';
 import { CareerPrepRoadmapView } from './components/CareerPrepRoadmapView';
+import { EncyclopediaView } from './components/EncyclopediaView';
 import { CompaniesPipelineView } from './components/CompaniesPipelineView';
 import { InstitutionsResearchView } from './components/InstitutionsResearchView';
 import { ToolsMasterView } from './components/ToolsMasterView';
@@ -50,10 +55,14 @@ import { EcosystemOutreachView } from './components/EcosystemOutreachView';
 import { WeeklyPlannerView } from './components/WeeklyPlannerView';
 import { ResumePortfolioGenerator } from './components/ResumePortfolioGenerator';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { getCheckedSubtopics, getStudiedEncyclopediaDocs, getCheckedToolSkills } from './utils/storage';
+import { initialCurriculum } from './data/curriculumData';
+import { flatEncyclopediaDocs } from './data/encyclopediaData';
 
 export type Tab = 
   | 'dashboard' 
   | 'career_prep'
+  | 'encyclopedia'
   | 'curriculum' 
   | 'planner'
   | 'projects' 
@@ -69,6 +78,7 @@ export type Tab =
 const TAB_LABELS: Record<Tab, { title: string; category: string }> = {
   dashboard: { title: 'Command Center', category: 'Executive Overview' },
   career_prep: { title: 'Career Prep Dashboard', category: '10 Tracks & Free Platforms' },
+  encyclopedia: { title: 'Semiconductor Encyclopedia', category: '18 Volumes • 336 Docs' },
   curriculum: { title: 'Curriculum & 15 Subtopics', category: 'Technical Foundation' },
   planner: { title: '20-Week Master Plan', category: 'Milestones & Sunday Gates' },
   projects: { title: 'Flagship Projects', category: 'Silicon & Embedded Builds' },
@@ -90,6 +100,7 @@ export default function App() {
     }
     return true;
   });
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -103,6 +114,38 @@ export default function App() {
     installApp, 
     updateApp 
   } = usePWA();
+
+  // Study Progress Summary for header stats
+  const studyProgress = useMemo(() => {
+    const checkedSubs = getCheckedSubtopics();
+    const studiedDocs = getStudiedEncyclopediaDocs();
+    const checkedTools = getCheckedToolSkills();
+
+    let totalSubs = 0;
+    let doneSubs = 0;
+    initialCurriculum.forEach(track => {
+      track.topics.forEach(tp => {
+        tp.subtopics.forEach(st => {
+          totalSubs++;
+          if (checkedSubs[st.id]) doneSubs++;
+        });
+      });
+    });
+
+    const totalDocs = flatEncyclopediaDocs.length;
+    const doneDocs = flatEncyclopediaDocs.filter(d => studiedDocs[d.path]).length;
+    const toolsDone = Object.values(checkedTools).filter(Boolean).length;
+
+    return {
+      doneSubs,
+      totalSubs,
+      subsPercent: totalSubs > 0 ? Math.round((doneSubs / totalSubs) * 100) : 0,
+      doneDocs,
+      totalDocs,
+      docsPercent: totalDocs > 0 ? Math.round((doneDocs / totalDocs) * 100) : 0,
+      toolsDone
+    };
+  }, [activeTab]);
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -137,12 +180,13 @@ export default function App() {
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
+    setIsMobileDrawerOpen(false);
     // Smooth scroll to top of main container
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-neutral-100 text-neutral-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-neutral-100 text-neutral-900 font-sans flex flex-col antialiased">
       {/* Offline Status Warning Bar */}
       {!isOnline && (
         <div className="bg-amber-600 text-white px-4 py-1.5 text-xs font-semibold flex items-center justify-center gap-2 shadow-sm">
@@ -169,27 +213,36 @@ export default function App() {
       
       {/* Top Global Command Header */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-30 px-3 sm:px-5 py-2.5 flex items-center justify-between shadow-2xs">
-        {/* Left: Brand Logo & Name + Breadcrumb */}
-        <div className="flex items-center gap-3">
-          {/* Brand Logo & Name (Compact) */}
+        {/* Left: Mobile Menu Toggle, Brand Logo & Breadcrumb */}
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          {/* Mobile Hamburger Drawer Trigger */}
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="md:hidden p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Brand Logo & Name */}
           <div 
             onClick={() => handleTabChange('dashboard')} 
-            className="flex items-center gap-2 cursor-pointer select-none group"
+            className="flex items-center gap-2 cursor-pointer select-none group shrink-0"
           >
             <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shadow-2xs group-hover:bg-neutral-800 transition-colors">
               H
             </div>
             <div className="hidden sm:block">
               <span className="text-xs font-bold tracking-tight text-neutral-900 group-hover:text-neutral-700">
-                Hardware &amp; Silicon Engineering Tracker
+                Hardware &amp; Silicon Tracker
               </span>
             </div>
           </div>
 
-          <div className="h-4 w-px bg-neutral-200 hidden sm:block mx-1" />
+          <div className="h-4 w-px bg-neutral-200 hidden sm:block mx-1 shrink-0" />
 
           {/* Breadcrumb Indicator */}
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500 truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+          <div className="flex items-center gap-1.5 text-xs text-neutral-500 truncate max-w-[150px] sm:max-w-xs md:max-w-md">
             <span className="hidden md:inline font-medium text-neutral-400">
               {TAB_LABELS[activeTab]?.category || 'Section'}
             </span>
@@ -200,12 +253,29 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right: Quick Action Controls */}
-        <div className="flex items-center gap-2">
+        {/* Right: Quick Action Controls & Live Study Badges */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Live Progress Pill */}
+          <div 
+            onClick={() => handleTabChange('encyclopedia')}
+            className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-neutral-50 border border-neutral-200 rounded-lg text-[11px] font-medium text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
+            title="Curriculum & Encyclopedia Study Progress"
+          >
+            <div className="flex items-center gap-1 text-emerald-700 font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{studyProgress.doneSubs}/{studyProgress.totalSubs} Subs</span>
+            </div>
+            <span className="text-neutral-300">&bull;</span>
+            <div className="flex items-center gap-1 text-indigo-700 font-semibold">
+              <Library className="w-3.5 h-3.5" />
+              <span>{studyProgress.doneDocs}/336 Docs</span>
+            </div>
+          </div>
+
           {/* Quick Search Button / Command Palette Trigger */}
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-600 hover:text-neutral-900 border border-neutral-200/60 text-xs font-medium transition-all shadow-2xs cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-600 hover:text-neutral-900 border border-neutral-200/60 text-xs font-medium transition-all shadow-2xs cursor-pointer"
             title="Search anywhere (Ctrl+K)"
           >
             <Search className="w-3.5 h-3.5 text-neutral-500" />
@@ -219,7 +289,7 @@ export default function App() {
           <div className="hidden lg:flex items-center gap-1">
             <button
               onClick={() => handleTabChange('calculators')}
-              className={`px-2.5 py-1.2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'calculators' ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'
               }`}
             >
@@ -228,7 +298,7 @@ export default function App() {
             </button>
             <button
               onClick={() => handleTabChange('interviews')}
-              className={`px-2.5 py-1.2 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'interviews' ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'
               }`}
             >
@@ -251,20 +321,18 @@ export default function App() {
       {/* Main Layout Container */}
       <div className="flex-1 flex relative overflow-hidden">
         
-        {/* Collapsible Left Navigation Sidebar (Visible on both mobile & desktop) */}
-        <aside className={`flex flex-col bg-white border-r border-neutral-200 shrink-0 sticky top-[49px] h-[calc(100vh-49px)] overflow-y-auto z-20 transition-all duration-200 shadow-2xs ${
-          isSidebarOpen ? 'w-56 sm:w-64' : 'w-14 sm:w-16'
+        {/* Desktop Collapsible Left Navigation Sidebar (Hidden on mobile < md) */}
+        <aside className={`hidden md:flex flex-col bg-white border-r border-neutral-200 shrink-0 sticky top-[49px] h-[calc(100vh-49px)] overflow-y-auto z-20 transition-all duration-200 shadow-2xs ${
+          isSidebarOpen ? 'w-64' : 'w-16'
         }`}>
-          <div className="p-2 sm:p-3 flex flex-col h-full justify-between">
-            <div className="space-y-3 sm:space-y-4">
+          <div className="p-3 flex flex-col h-full justify-between">
+            <div className="space-y-4">
               {/* Sidebar Header & Toggle Button */}
               <div className={`flex items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'} px-1`}>
                 {isSidebarOpen ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
-                      Navigation
-                    </span>
-                  </div>
+                  <span className="text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
+                    Navigation
+                  </span>
                 ) : null}
                 
                 <button
@@ -289,13 +357,13 @@ export default function App() {
 
             {/* Bottom Target Card (Visible when expanded) */}
             {isSidebarOpen ? (
-              <div className="pt-3 sm:pt-4 border-t border-neutral-100">
-                <div className="bg-neutral-50 p-2.5 sm:p-3 rounded-xl border border-neutral-200/80 space-y-1">
+              <div className="pt-4 border-t border-neutral-100">
+                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                     Target Mission
                   </div>
-                  <p className="text-[10px] sm:text-[11px] text-neutral-600 leading-snug">
+                  <p className="text-[11px] text-neutral-600 leading-snug">
                     RTL Design &bull; Verification &bull; FPGA &bull; Embedded
                   </p>
                 </div>
@@ -310,8 +378,53 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Main Content Workspace */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-6xl mx-auto overflow-y-auto w-full transition-all">
+        {/* Mobile Slide-Over Off-Canvas Drawer (Visible when isMobileDrawerOpen is true) */}
+        {isMobileDrawerOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            {/* Backdrop */}
+            <div 
+              onClick={() => setIsMobileDrawerOpen(false)}
+              className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity"
+            />
+            
+            {/* Drawer Content */}
+            <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-white shadow-xl flex flex-col justify-between p-4 overflow-y-auto animate-in slide-in-from-left duration-200">
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs">
+                      H
+                    </div>
+                    <span className="text-xs font-bold text-neutral-900">Silicon Tracker</span>
+                  </div>
+                  <button
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Nav Items */}
+                <nav className="space-y-1">
+                  {renderNavItems(activeTab, handleTabChange, false)}
+                </nav>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="pt-4 border-t border-neutral-100">
+                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200 text-center text-xs text-neutral-600">
+                  <div className="font-bold text-neutral-900">Silicon Engineering Hub</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">18 Vols &bull; 10 Specializations</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Workspace (padded bottom on mobile to accommodate bottom nav bar) */}
+        <main className="flex-1 p-3.5 sm:p-6 md:p-8 lg:p-10 max-w-6xl mx-auto overflow-y-auto w-full transition-all pb-24 md:pb-12">
           {activeTab === 'dashboard' && (
             <div className="animate-in fade-in duration-200">
               <DashboardOverview onNavigate={(tab) => handleTabChange(tab as any)} />
@@ -321,6 +434,12 @@ export default function App() {
           {activeTab === 'career_prep' && (
             <div className="animate-in fade-in duration-200">
               <CareerPrepRoadmapView />
+            </div>
+          )}
+
+          {activeTab === 'encyclopedia' && (
+            <div className="animate-in fade-in duration-200">
+              <EncyclopediaView />
             </div>
           )}
 
@@ -392,6 +511,57 @@ export default function App() {
         </main>
       </div>
 
+      {/* Mobile Bottom Navigation Bar (Fixed at bottom on phones < md) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200 px-2 py-1.5 flex justify-around items-center shadow-lg">
+        <button
+          onClick={() => handleTabChange('dashboard')}
+          className={`flex flex-col items-center justify-center p-1.5 rounded-lg min-w-[54px] cursor-pointer transition-colors ${
+            activeTab === 'dashboard' ? 'text-neutral-900 font-bold' : 'text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <LayoutDashboard className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Overview</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('encyclopedia')}
+          className={`flex flex-col items-center justify-center p-1.5 rounded-lg min-w-[54px] cursor-pointer transition-colors ${
+            activeTab === 'encyclopedia' ? 'text-indigo-600 font-bold' : 'text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <Library className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Library</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('curriculum')}
+          className={`flex flex-col items-center justify-center p-1.5 rounded-lg min-w-[54px] cursor-pointer transition-colors ${
+            activeTab === 'curriculum' ? 'text-neutral-900 font-bold' : 'text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <BookOpen className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Curriculum</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('career_prep')}
+          className={`flex flex-col items-center justify-center p-1.5 rounded-lg min-w-[54px] cursor-pointer transition-colors ${
+            activeTab === 'career_prep' ? 'text-cyan-600 font-bold' : 'text-neutral-500 hover:text-neutral-900'
+          }`}
+        >
+          <Cpu className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Tracks</span>
+        </button>
+
+        <button
+          onClick={() => setIsMobileDrawerOpen(true)}
+          className="flex flex-col items-center justify-center p-1.5 rounded-lg min-w-[54px] text-neutral-500 hover:text-neutral-900 cursor-pointer transition-colors"
+        >
+          <Grid className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">More</span>
+        </button>
+      </div>
+
       {/* Global Command Palette Modal */}
       <CommandPaletteModal 
         isOpen={isCommandPaletteOpen}
@@ -426,6 +596,7 @@ function renderNavItems(
   }> = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-4 h-4 shrink-0" />, label: 'Command Center', badge: 'Overview' },
     { id: 'career_prep', icon: <Cpu className="w-4 h-4 shrink-0 text-cyan-600" />, label: 'Career Prep Roadmap', badge: '10 Tracks' },
+    { id: 'encyclopedia', icon: <Library className="w-4 h-4 shrink-0 text-indigo-600" />, label: 'Encyclopedia & Docs', badge: '18 Vols' },
     { id: 'curriculum', icon: <BookOpen className="w-4 h-4 shrink-0" />, label: 'Curriculum & Subtopics', badge: '15 Tracks' },
     { id: 'planner', icon: <Calendar className="w-4 h-4 shrink-0" />, label: '20-Week Master Plan', badge: 'Sunday Gate' },
     { id: 'projects', icon: <Rocket className="w-4 h-4 shrink-0" />, label: 'Flagship Projects', badge: '4 Builds' },
@@ -494,5 +665,4 @@ const NavItem: React.FC<NavItemProps> = ({
       )}
     </button>
   );
-}
-
+};

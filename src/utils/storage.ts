@@ -45,7 +45,9 @@ const STORAGE_KEYS = {
   INSTITUTIONS_OVERRIDE: 'ayush_tracker_institutions_override',
   CAREER_PREP_TASKS: 'ayush_tracker_career_prep_tasks',
   CAREER_PREP_PROJECTS: 'ayush_tracker_career_prep_projects',
-  CUSTOM_CAREER_PREP_TRACKS: 'ayush_tracker_custom_career_prep_tracks_v1'
+  CUSTOM_CAREER_PREP_TRACKS: 'ayush_tracker_custom_career_prep_tracks_v1',
+  ENCYCLOPEDIA_STUDIED: 'ayush_tracker_encyclopedia_studied_v1',
+  ENCYCLOPEDIA_BOOKMARKS: 'ayush_tracker_encyclopedia_bookmarks_v1'
 };
 
 // --- Checkboxes & Micro Progress Trackers ---
@@ -539,5 +541,41 @@ export function resetStoredCareerPrepTracks(): CareerPrepTrack[] {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_CAREER_PREP_TRACKS);
   } catch (e) {}
   return initialCareerPrepTracks;
+}
+
+// --- Encyclopedia Study & Bookmark Tracking ---
+
+export function getStudiedEncyclopediaDocs(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ENCYCLOPEDIA_STUDIED);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveStudiedEncyclopediaDocs(data: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ENCYCLOPEDIA_STUDIED, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save studied encyclopedia docs', e);
+  }
+}
+
+export function getBookmarkedEncyclopediaDocs(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ENCYCLOPEDIA_BOOKMARKS);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveBookmarkedEncyclopediaDocs(data: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ENCYCLOPEDIA_BOOKMARKS, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save bookmarked encyclopedia docs', e);
+  }
 }
 

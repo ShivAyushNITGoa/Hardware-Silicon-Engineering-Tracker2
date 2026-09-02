@@ -27,7 +27,10 @@ import {
   Trash2,
   X,
   Save,
-  RotateCcw
+  RotateCcw,
+  Shuffle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 const CATEGORIES: string[] = [
@@ -66,6 +69,9 @@ export const InterviewDrillsView: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isFlashcardMode, setIsFlashcardMode] = useState<boolean>(false);
+  const [revealedSolutions, setRevealedSolutions] = useState<Record<string, boolean>>({});
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Untested' | 'Review' | 'Mastered'>('All');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,6 +87,26 @@ export const InterviewDrillsView: React.FC = () => {
     const updated = { ...statusMap, [id]: status };
     setStatusMap(updated);
     saveInterviewQuestionsStatus(updated);
+  };
+
+  const handleRandomDrill = () => {
+    if (questionsList.length === 0) return;
+    const candidates = filteredQuestions.length > 0 ? filteredQuestions : questionsList;
+    const unmastered = candidates.filter(q => (statusMap[q.id] || 'Untested') !== 'Mastered');
+    const pool = unmastered.length > 0 ? unmastered : candidates;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    if (picked) {
+      setExpandedId(picked.id);
+      setRevealedSolutions(prev => ({ ...prev, [picked.id]: false }));
+      setTimeout(() => {
+        const elem = document.getElementById(`card-interview-${picked.id}`);
+        if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  };
+
+  const toggleReveal = (id: string) => {
+    setRevealedSolutions(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleOpenAdd = () => {
@@ -149,13 +175,15 @@ export const InterviewDrillsView: React.FC = () => {
     return questionsList.filter((q) => {
       const matchesCat = selectedCategory === 'All' || q.category === selectedCategory;
       const matchesComp = selectedCompany === 'All' || q.companies.includes(selectedCompany);
+      const currentStatus = statusMap[q.id] || 'Untested';
+      const matchesStatus = statusFilter === 'All' || currentStatus === statusFilter;
       const matchesSearch =
         q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         q.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
         q.answer.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCat && matchesComp && matchesSearch;
+      return matchesCat && matchesComp && matchesStatus && matchesSearch;
     });
-  }, [questionsList, selectedCategory, selectedCompany, searchQuery]);
+  }, [questionsList, selectedCategory, selectedCompany, statusFilter, statusMap, searchQuery]);
 
   const masteredCount = Object.values(statusMap).filter((s) => s === 'Mastered').length;
   const reviewCount = Object.values(statusMap).filter((s) => s === 'Review').length;
@@ -177,16 +205,38 @@ export const InterviewDrillsView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-4 bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRandomDrill}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+              title="Pick a random interview drill question"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+              <span>Random Drill</span>
+            </button>
+
+            <button
+              onClick={() => setIsFlashcardMode(!isFlashcardMode)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isFlashcardMode
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+              }`}
+              title="Toggle self-test active recall mode"
+            >
+              {isFlashcardMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span>{isFlashcardMode ? 'Flashcards Active' : 'Self-Test Mode'}</span>
+            </button>
+
+            <div className="hidden sm:flex items-center gap-4 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
               <div className="text-right">
-                <div className="text-xs text-slate-400 font-medium">Readiness Score</div>
-                <div className="text-xl font-bold text-emerald-400">{progressPercent}%</div>
+                <div className="text-[10px] text-slate-400 font-medium">Readiness</div>
+                <div className="text-base font-bold text-emerald-400">{progressPercent}%</div>
               </div>
-              <div className="h-8 w-px bg-slate-700" />
+              <div className="h-7 w-px bg-slate-700" />
               <div className="text-right">
-                <div className="text-xs text-slate-400 font-medium">Mastered / Review</div>
-                <div className="text-sm font-bold font-mono text-slate-200">
+                <div className="text-[10px] text-slate-400 font-medium">Done / Review</div>
+                <div className="text-xs font-bold font-mono text-slate-200">
                   <span className="text-emerald-400">{masteredCount}</span> / <span className="text-amber-400">{reviewCount}</span>
                 </div>
               </div>
@@ -194,10 +244,10 @@ export const InterviewDrillsView: React.FC = () => {
 
             <button
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Drill</span>
+              <span className="hidden sm:inline">Add Drill</span>
             </button>
 
             <button
@@ -206,7 +256,6 @@ export const InterviewDrillsView: React.FC = () => {
               title="Reset drills to defaults"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reset</span>
             </button>
           </div>
         </div>
@@ -221,54 +270,74 @@ export const InterviewDrillsView: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between" id="interview-search-bar">
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-          <input
-            id="input-interview-search"
-            type="text"
-            placeholder="Search concepts, equations, code..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 placeholder:text-slate-400"
-          />
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3" id="interview-search-bar">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+            <input
+              id="input-interview-search"
+              type="text"
+              placeholder="Search concepts, equations, code, UVM, STA..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 placeholder:text-slate-400"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <Filter className="w-3.5 h-3.5" />
+              <span>Domain:</span>
+            </div>
+            <select
+              id="select-interview-category"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-1 text-xs text-slate-500 ml-1">
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Company:</span>
+            </div>
+            <select
+              id="select-interview-company"
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+              className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="All">All Companies ({allCompanies.length})</option>
+              {allCompanies.map((comp) => (
+                <option key={comp} value={comp}>
+                  {comp}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
-          <div className="flex items-center gap-1 text-xs text-slate-500">
-            <Filter className="w-3.5 h-3.5" />
-            <span>Domain:</span>
-          </div>
-          <select
-            id="select-interview-category"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex items-center gap-1 text-xs text-slate-500 ml-2">
-            <Cpu className="w-3.5 h-3.5" />
-            <span>Company:</span>
-          </div>
-          <select
-            id="select-interview-company"
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
-            className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="All">All Companies ({allCompanies.length})</option>
-            {allCompanies.map((comp) => (
-              <option key={comp} value={comp}>
-                {comp}
-              </option>
-            ))}
-          </select>
+        {/* Status Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+          <span className="text-[11px] font-semibold text-slate-500 mr-1">Status:</span>
+          {(['All', 'Untested', 'Review', 'Mastered'] as const).map(st => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                statusFilter === st
+                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+              }`}
+            >
+              {st === 'All' ? `All (${questionsList.length})` : st === 'Untested' ? '⚪ Untested' : st === 'Review' ? `🟡 Review (${reviewCount})` : `🟢 Mastered (${masteredCount})`}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -330,9 +399,9 @@ export const InterviewDrillsView: React.FC = () => {
                         <h3 className="text-sm font-bold text-slate-900">{q.title}</h3>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            q.difficulty === 'Hard'
+                            q.difficulty === 'Crucial'
                               ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : q.difficulty === 'Medium'
+                              : q.difficulty === 'Advanced'
                               ? 'bg-amber-50 text-amber-700 border-amber-200'
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           }`}
@@ -397,61 +466,117 @@ export const InterviewDrillsView: React.FC = () => {
 
                 {/* Accordion Content */}
                 {isExpanded && (
-                  <div className="p-5 border-t border-slate-200 bg-white space-y-4 text-xs text-slate-700">
+                  <div className="p-4 sm:p-5 border-t border-slate-200 bg-white space-y-4 text-xs text-slate-700">
                     {/* The Prompt / Question */}
                     <div>
                       <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                         Interviewer Question / Whiteboard Prompt:
                       </div>
-                      <p className="text-sm font-semibold text-slate-900 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <p className="text-sm font-semibold text-slate-900 leading-relaxed bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 shadow-2xs">
                         {q.question}
                       </p>
                     </div>
 
-                    {/* Formula / Timing Diagram if present */}
-                    {q.formulaOrDiagram && (
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 mb-1 flex items-center gap-1">
-                          <Layers className="w-3.5 h-3.5" />
-                          <span>Mathematical Formula / Timing Criteria:</span>
+                    {/* Flashcard Hidden Solution Overlay */}
+                    {isFlashcardMode && !revealedSolutions[q.id] ? (
+                      <div className="bg-slate-900 text-white rounded-xl p-5 text-center space-y-3 border border-slate-800 shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                          <EyeOff className="w-5 h-5" />
                         </div>
-                        <pre className="bg-slate-900 text-indigo-300 p-3.5 rounded-lg font-mono text-[11px] whitespace-pre-wrap leading-relaxed border border-slate-800">
-                          {q.formulaOrDiagram}
-                        </pre>
+                        <div className="space-y-1">
+                          <div className="text-sm font-bold text-slate-100">Flashcard Active Recall Challenge</div>
+                          <p className="text-xs text-slate-400 max-w-md mx-auto">
+                            Derive the formula, sketch the timing diagram, or draft the SystemVerilog/C logic on paper before revealing.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => toggleReveal(q.id)}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer inline-flex items-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Reveal Solution &amp; Mathematical Proof</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 animate-in fade-in duration-200">
+                        {/* Formula / Timing Diagram if present */}
+                        {q.formulaOrDiagram && (
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 mb-1 flex items-center gap-1">
+                              <Layers className="w-3.5 h-3.5" />
+                              <span>Mathematical Formula / Timing Criteria:</span>
+                            </div>
+                            <pre className="bg-slate-900 text-indigo-300 p-3.5 rounded-xl font-mono text-[11px] whitespace-pre-wrap leading-relaxed border border-slate-800 overflow-x-auto">
+                              {q.formulaOrDiagram}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* Code Snippet if present */}
+                        {q.codeSnippet && (
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mb-1 flex items-center gap-1">
+                              <Code className="w-3.5 h-3.5" />
+                              <span>RTL / C / SVA Implementation:</span>
+                            </div>
+                            <pre className="bg-slate-900 text-emerald-300 p-3.5 rounded-xl font-mono text-[11px] whitespace-pre-wrap leading-relaxed border border-slate-800 overflow-x-auto">
+                              {q.codeSnippet}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* Comprehensive Technical Answer */}
+                        <div>
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            Complete Technical Solution & Architectural Explanation:
+                          </div>
+                          <div className="bg-slate-50/80 p-3.5 sm:p-4 rounded-xl border border-slate-200 text-slate-800 space-y-2 whitespace-pre-line leading-relaxed text-xs sm:text-sm">
+                            {q.answer}
+                          </div>
+                        </div>
+
+                        {/* Key Takeaway Banner */}
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 sm:p-3.5 flex items-start gap-2.5 text-indigo-900">
+                          <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold">Golden Interview Rule: </span>
+                            <span>{q.keyTakeaway}</span>
+                          </div>
+                        </div>
+
+                        {/* Quick Recall Rating Bar */}
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-slate-600">Quick Recall Self-Rating:</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleStatusChange(q.id, 'Review')}
+                              className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
+                                currentStatus === 'Review' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-white text-slate-600 hover:bg-amber-50'
+                              }`}
+                            >
+                              🟡 Needs More Practice
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(q.id, 'Mastered')}
+                              className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
+                                currentStatus === 'Mastered' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-white text-slate-600 hover:bg-emerald-50'
+                              }`}
+                            >
+                              🟢 Confident / Mastered
+                            </button>
+                            {isFlashcardMode && (
+                              <button
+                                onClick={() => toggleReveal(q.id)}
+                                className="px-2 py-1 rounded-md text-xs text-slate-500 hover:bg-slate-200 ml-1"
+                                title="Hide Solution"
+                              >
+                                Hide
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
-
-                    {/* Code Snippet if present */}
-                    {q.codeSnippet && (
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mb-1 flex items-center gap-1">
-                          <Code className="w-3.5 h-3.5" />
-                          <span>RTL / C / SVA Implementation:</span>
-                        </div>
-                        <pre className="bg-slate-900 text-emerald-300 p-3.5 rounded-lg font-mono text-[11px] whitespace-pre-wrap leading-relaxed border border-slate-800">
-                          {q.codeSnippet}
-                        </pre>
-                      </div>
-                    )}
-
-                    {/* Comprehensive Technical Answer */}
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                        Complete Technical Solution & Architectural Explanation:
-                      </div>
-                      <div className="bg-slate-50/70 p-3.5 rounded-lg border border-slate-200 text-slate-800 space-y-2 whitespace-pre-line leading-relaxed">
-                        {q.answer}
-                      </div>
-                    </div>
-
-                    {/* Key Takeaway Banner */}
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex items-start gap-2.5 text-indigo-900">
-                      <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold">Golden Interview Rule: </span>
-                        <span>{q.keyTakeaway}</span>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>

@@ -18,7 +18,8 @@ import {
   GraduationCap,
   Filter,
   CheckSquare,
-  Square
+  Square,
+  CheckCheck
 } from 'lucide-react';
 import { 
   CareerPrepTrack, 
@@ -43,6 +44,12 @@ export const CareerPrepRoadmapView: React.FC = () => {
   const [checkedProjects, setCheckedProjects] = useState<Record<string, boolean>>(() => getCheckedCareerProjects());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('All');
+  const [trackStatusFilter, setTrackStatusFilter] = useState<'All' | 'Pending' | 'Done'>('All');
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [projectCategoryFilter, setProjectCategoryFilter] = useState<string>('All');
+  const [projectStatusFilter, setProjectStatusFilter] = useState<'All' | 'Pending' | 'Done'>('All');
+  const [directorySearchQuery, setDirectorySearchQuery] = useState('');
+
   const [expandedTrackIds, setExpandedTrackIds] = useState<Record<string, boolean>>({
     'track-digital-design': true,
     'track-rtl-design': true
@@ -77,24 +84,78 @@ export const CareerPrepRoadmapView: React.FC = () => {
     return ['All', ...Array.from(set).sort()];
   }, [tracks]);
 
+  // Unique project categories
+  const projectCategories = useMemo(() => {
+    const set = new Set<string>();
+    initialProjectTrackerItems.forEach(p => set.add(p.category));
+    return ['All', ...Array.from(set).sort()];
+  }, []);
+
   // Filtered tracks
   const filteredTracks = useMemo(() => {
     return tracks.filter(track => {
-      const matchesSearch = 
-        track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        track.tagline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        track.whyLearn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        track.roles.some(r => r.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        track.tasks.some(t => t.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        track.companies.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = !q ||
+        track.title.toLowerCase().includes(q) ||
+        track.tagline.toLowerCase().includes(q) ||
+        track.whyLearn.toLowerCase().includes(q) ||
+        track.roles.some(r => r.toLowerCase().includes(q)) ||
+        track.tasks.some(t => t.name.toLowerCase().includes(q)) ||
+        track.companies.some(c => c.toLowerCase().includes(q));
 
       const matchesCompany = 
         selectedCompanyFilter === 'All' || 
         track.companies.includes(selectedCompanyFilter);
 
-      return matchesSearch && matchesCompany;
+      const trackCompleted = track.tasks.filter(t => checkedTasks[t.id]).length;
+      const trackTotal = track.tasks.length;
+      const isDone = trackTotal > 0 && trackCompleted === trackTotal;
+
+      const matchesStatus = trackStatusFilter === 'All' ||
+        (trackStatusFilter === 'Done' && isDone) ||
+        (trackStatusFilter === 'Pending' && !isDone);
+
+      return matchesSearch && matchesCompany && matchesStatus;
     });
-  }, [tracks, searchQuery, selectedCompanyFilter]);
+  }, [tracks, searchQuery, selectedCompanyFilter, trackStatusFilter, checkedTasks]);
+
+  // Filtered projects
+  const filteredProjects = useMemo(() => {
+    return initialProjectTrackerItems.filter(item => {
+      const q = projectSearchQuery.toLowerCase().trim();
+      const matchesSearch = !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q);
+
+      const matchesCategory = projectCategoryFilter === 'All' || item.category === projectCategoryFilter;
+
+      const isChecked = !!checkedProjects[item.id];
+      const matchesStatus = projectStatusFilter === 'All' ||
+        (projectStatusFilter === 'Done' && isChecked) ||
+        (projectStatusFilter === 'Pending' && !isChecked);
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [projectSearchQuery, projectCategoryFilter, projectStatusFilter, checkedProjects]);
+
+  // Filtered directory
+  const filteredDirectory = useMemo(() => {
+    const q = directorySearchQuery.toLowerCase().trim();
+    if (!q) return completeLearningDirectory;
+
+    return completeLearningDirectory.map(cat => {
+      const matchingItems = cat.items.filter(item =>
+        item.name.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        cat.category.toLowerCase().includes(q)
+      );
+      return {
+        ...cat,
+        items: matchingItems
+      };
+    }).filter(cat => cat.items.length > 0);
+  }, [directorySearchQuery]);
 
   // Toggle single task check
   const handleToggleTask = (taskId: string) => {
@@ -105,10 +166,35 @@ export const CareerPrepRoadmapView: React.FC = () => {
     });
   };
 
+  // Toggle all tasks in a track
+  const handleToggleAllTrackTasks = (track: CareerPrepTrack, shouldCheck: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCheckedTasks(prev => {
+      const next = { ...prev };
+      track.tasks.forEach(t => {
+        next[t.id] = shouldCheck;
+      });
+      saveCheckedCareerTasks(next);
+      return next;
+    });
+  };
+
   // Toggle single project check
   const handleToggleProject = (projId: string) => {
     setCheckedProjects(prev => {
       const next = { ...prev, [projId]: !prev[projId] };
+      saveCheckedCareerProjects(next);
+      return next;
+    });
+  };
+
+  // Toggle all projects
+  const handleToggleAllProjects = (shouldCheck: boolean) => {
+    setCheckedProjects(prev => {
+      const next = { ...prev };
+      filteredProjects.forEach(p => {
+        next[p.id] = shouldCheck;
+      });
       saveCheckedCareerProjects(next);
       return next;
     });
@@ -316,38 +402,58 @@ export const CareerPrepRoadmapView: React.FC = () => {
 
         {/* Search & Filter Bar (Visible in Tracks Tab) */}
         {activeSubTab === 'tracks' && (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-2 border-t border-neutral-100">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search tracks, roles (e.g. RTL, UVM, FPGA, RISC-V), companies, or concepts..."
-                className="w-full pl-9 pr-3 py-1.5 bg-neutral-50 text-xs border border-neutral-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs"
+          <div className="pt-2 border-t border-neutral-100 space-y-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search tracks, roles (e.g. RTL, UVM, FPGA, RISC-V), companies, or concepts..."
+                  className="w-full pl-9 pr-3 py-1.5 bg-neutral-50 text-xs border border-neutral-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                <select
+                  value={selectedCompanyFilter}
+                  onChange={e => setSelectedCompanyFilter(e.target.value)}
+                  className="bg-neutral-50 text-xs border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
                 >
-                  &times;
-                </button>
-              )}
+                  <option value="All">All Target Companies ({allCompanies.length - 1})</option>
+                  {allCompanies.filter(c => c !== 'All').map(company => (
+                    <option key={company} value={company}>{company}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-              <select
-                value={selectedCompanyFilter}
-                onChange={e => setSelectedCompanyFilter(e.target.value)}
-                className="bg-neutral-50 text-xs border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
-              >
-                <option value="All">All Target Companies ({allCompanies.length - 1})</option>
-                {allCompanies.filter(c => c !== 'All').map(company => (
-                  <option key={company} value={company}>{company}</option>
-                ))}
-              </select>
+            {/* Status Filter Chips for Tracks */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[11px] font-semibold text-neutral-500 mr-1">Status:</span>
+              {(['All', 'Pending', 'Done'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setTrackStatusFilter(st)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    trackStatusFilter === st
+                      ? 'bg-neutral-900 text-white shadow-2xs'
+                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900'
+                  }`}
+                >
+                  {st === 'All' ? `All Tracks (${tracks.length})` : st === 'Pending' ? '⏳ Pending' : '✅ Completed'}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -482,14 +588,25 @@ export const CareerPrepRoadmapView: React.FC = () => {
 
                       {/* Interactive Tasks Checklist */}
                       <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
                           <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
                             <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
                             Core Track Milestones &amp; Concepts ({trackCompleted}/{trackTotal})
                           </span>
-                          <span className="text-[11px] text-neutral-500 font-medium">
-                            Click to toggle completion
-                          </span>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => handleToggleAllTrackTasks(track, trackCompleted !== trackTotal, e)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 px-2 py-1 rounded border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors cursor-pointer"
+                              title={trackCompleted === trackTotal ? 'Uncheck all tasks' : 'Check all tasks'}
+                            >
+                              <CheckCheck className="w-3 h-3 text-indigo-600" />
+                              <span>{trackCompleted === trackTotal ? 'Reset Track' : 'Check All'}</span>
+                            </button>
+                            <span className="text-[11px] text-neutral-500 font-medium hidden sm:inline">
+                              Click to toggle completion
+                            </span>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -591,110 +708,217 @@ export const CareerPrepRoadmapView: React.FC = () => {
                 Crucial hands-on silicon, verification, processor, and embedded builds for your technical portfolio.
               </p>
             </div>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg self-start sm:self-auto">
-              {completedProjectsCount} of {initialProjectTrackerItems.length} Completed
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg self-start sm:self-auto">
+                {completedProjectsCount} of {initialProjectTrackerItems.length} Completed
+              </span>
+              <button
+                onClick={() => handleToggleAllProjects(completedProjectsCount !== initialProjectTrackerItems.length)}
+                className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer"
+              >
+                <CheckCheck className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{completedProjectsCount === initialProjectTrackerItems.length ? 'Reset All' : 'Check All'}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {initialProjectTrackerItems.map(item => {
-              const isChecked = !!checkedProjects[item.id];
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleToggleProject(item.id)}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
-                    isChecked
-                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-                      : 'bg-neutral-50 hover:bg-white border-neutral-200 hover:border-neutral-300'
+          {/* Project Search & Filter Toolbar */}
+          <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 space-y-2.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="text"
+                  value={projectSearchQuery}
+                  onChange={e => setProjectSearchQuery(e.target.value)}
+                  placeholder="Search project title, concept, or description..."
+                  className="w-full pl-9 pr-3 py-1.5 bg-white text-xs border border-neutral-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                <select
+                  value={projectCategoryFilter}
+                  onChange={e => setProjectCategoryFilter(e.target.value)}
+                  className="bg-white text-xs border border-neutral-200 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
+                >
+                  {projectCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat === 'All' ? 'All Categories' : cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Project Status Filter */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-neutral-200/60">
+              <span className="text-[11px] font-semibold text-neutral-500 mr-1">Status:</span>
+              {(['All', 'Pending', 'Done'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setProjectStatusFilter(st)}
+                  className={`px-2.5 py-0.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    projectStatusFilter === st
+                      ? 'bg-neutral-900 text-white shadow-2xs'
+                      : 'bg-white text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 border border-neutral-200'
                   }`}
                 >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleProject(item.id);
-                    }}
-                    className="mt-0.5 text-neutral-400 hover:text-neutral-900 cursor-pointer"
-                  >
-                    {isChecked ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-neutral-300 hover:text-neutral-500" />
-                    )}
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className={`text-sm font-bold ${isChecked ? 'line-through opacity-80' : 'text-neutral-900'}`}>
-                        {item.name}
-                      </h3>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white border border-neutral-200 text-neutral-700 shrink-0">
-                        {item.category}
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+                  {st === 'All' ? `All (${initialProjectTrackerItems.length})` : st === 'Pending' ? '⏳ Pending' : '✅ Completed'}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {filteredProjects.length === 0 ? (
+            <div className="p-8 text-center text-neutral-500 bg-neutral-50 rounded-xl border border-neutral-200">
+              <p className="text-sm font-medium">No projects match your current search/status filter.</p>
+              <button
+                onClick={() => { setProjectSearchQuery(''); setProjectCategoryFilter('All'); setProjectStatusFilter('All'); }}
+                className="mt-2 text-xs text-indigo-600 hover:underline font-semibold"
+              >
+                Reset Project Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredProjects.map(item => {
+                const isChecked = !!checkedProjects[item.id];
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => handleToggleProject(item.id)}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                      isChecked
+                        ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                        : 'bg-neutral-50 hover:bg-white border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleProject(item.id);
+                      }}
+                      className="mt-0.5 text-neutral-400 hover:text-neutral-900 cursor-pointer"
+                    >
+                      {isChecked ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-neutral-300 hover:text-neutral-500" />
+                      )}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className={`text-sm font-bold ${isChecked ? 'line-through opacity-80' : 'text-neutral-900'}`}>
+                          {item.name}
+                        </h3>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white border border-neutral-200 text-neutral-700 shrink-0">
+                          {item.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 3: COMPLETE FREE LEARNING PLATFORM DIRECTORY */}
       {activeSubTab === 'directory' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-neutral-200/90 shadow-2xs p-5 sm:p-6 space-y-1">
-            <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-cyan-600" />
-              Complete Free Learning Platform Directory
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Curated official repositories, interactive simulators, universities and industry documentation portals across VLSI, FPGA, UVM &amp; RISC-V.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {completeLearningDirectory.map((category, idx) => (
-              <div 
-                key={idx}
-                className="bg-white rounded-xl border border-neutral-200/80 shadow-2xs p-4 sm:p-5 space-y-3"
-              >
-                <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 pb-2 border-b border-neutral-100">
-                  <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>{category.category}</span>
-                </div>
-
-                <ul className="space-y-2.5">
-                  {category.items.map((item, itemIdx) => (
-                    <li key={itemIdx} className="group">
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block p-2.5 rounded-lg bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/70 hover:border-neutral-300 transition-all"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-neutral-900 group-hover:text-cyan-700 flex items-center gap-1">
-                            {item.name}
-                            <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
-                          </span>
-                          <span className="text-[10px] text-neutral-400 font-mono group-hover:text-neutral-600">
-                            {new URL(item.url).hostname}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 mt-1 leading-snug">
-                          {item.description}
-                        </p>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+          <div className="bg-white rounded-xl border border-neutral-200/90 shadow-2xs p-5 sm:p-6 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-cyan-600" />
+                  Complete Free Learning Platform Directory
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Curated official repositories, interactive simulators, universities and industry documentation portals across VLSI, FPGA, UVM &amp; RISC-V.
+                </p>
               </div>
-            ))}
+            </div>
+
+            {/* Search filter for directory */}
+            <div className="relative max-w-md">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                value={directorySearchQuery}
+                onChange={e => setDirectorySearchQuery(e.target.value)}
+                placeholder="Search courses, EDA simulators, NPTEL, portals..."
+                className="w-full pl-9 pr-3 py-1.5 bg-neutral-50 text-xs border border-neutral-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-neutral-900"
+              />
+              {directorySearchQuery && (
+                <button
+                  onClick={() => setDirectorySearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
           </div>
+
+          {filteredDirectory.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 text-center border border-neutral-200 text-neutral-500">
+              <p className="text-sm font-medium">No platforms or courses matched "{directorySearchQuery}".</p>
+              <button
+                onClick={() => setDirectorySearchQuery('')}
+                className="mt-2 text-xs text-indigo-600 hover:underline font-semibold"
+              >
+                Clear Search
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredDirectory.map((category, idx) => (
+                <div 
+                  key={idx}
+                  className="bg-white rounded-xl border border-neutral-200/80 shadow-2xs p-4 sm:p-5 space-y-3"
+                >
+                  <div className="flex items-center gap-2 text-xs font-bold text-neutral-900 pb-2 border-b border-neutral-100">
+                    <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>{category.category}</span>
+                    <span className="text-[10px] text-neutral-400 font-normal ml-auto">
+                      {category.items.length} resources
+                    </span>
+                  </div>
+
+                  <ul className="space-y-2.5">
+                    {category.items.map((item, itemIdx) => (
+                      <li key={itemIdx} className="group">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block p-2.5 rounded-lg bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/70 hover:border-neutral-300 transition-all"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-neutral-900 group-hover:text-cyan-700 flex items-center gap-1">
+                              {item.name}
+                              <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-mono group-hover:text-neutral-600">
+                              {new URL(item.url).hostname}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-1 leading-snug">
+                            {item.description}
+                          </p>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

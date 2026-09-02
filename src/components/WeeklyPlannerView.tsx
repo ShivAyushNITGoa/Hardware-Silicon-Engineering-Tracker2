@@ -24,7 +24,10 @@ import {
   Edit3,
   X,
   Save,
-  RotateCcw
+  RotateCcw,
+  Search,
+  Filter,
+  CheckCheck
 } from 'lucide-react';
 
 const BLANK_MILESTONE: WeeklyMilestoneItem = {
@@ -43,6 +46,9 @@ export const WeeklyPlannerView: React.FC = () => {
   const [completedWeeks, setCompletedWeeks] = useState<Record<number, boolean>>(() => getWeeklyMilestoneChecks());
   const [auditLogs, setAuditLogs] = useState<SundayAuditEntry[]>(() => getSundayAuditLogs());
   const [activeTab, setActiveTab] = useState<'timeline' | 'sunday-gate'>('timeline');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Done'>('All');
 
   // Milestone Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -157,6 +163,31 @@ export const WeeklyPlannerView: React.FC = () => {
   const completedCount = Object.values(completedWeeks).filter(Boolean).length;
   const progressPercent = Math.round((completedCount / (milestonesList.length || 1)) * 100);
 
+  const availableMonths = useMemo(() => {
+    const months = Array.from(new Set(milestonesList.map(m => `Month ${m.month}`))).sort();
+    return ['All', ...months];
+  }, [milestonesList]);
+
+  const filteredMilestones = useMemo(() => {
+    return milestonesList.filter(m => {
+      const matchMonth = selectedMonth === 'All' || `Month ${m.month}` === selectedMonth;
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q ||
+        m.title.toLowerCase().includes(q) ||
+        m.phase.toLowerCase().includes(q) ||
+        m.deliverable.toLowerCase().includes(q) ||
+        m.exitGate.toLowerCase().includes(q) ||
+        m.coreGoals.some(g => g.toLowerCase().includes(q));
+
+      const isDone = !!completedWeeks[m.week];
+      const matchStatus = statusFilter === 'All' ||
+        (statusFilter === 'Done' && isDone) ||
+        (statusFilter === 'Pending' && !isDone);
+
+      return matchMonth && matchSearch && matchStatus;
+    });
+  }, [milestonesList, selectedMonth, searchQuery, statusFilter, completedWeeks]);
+
   return (
     <div className="space-y-6" id="weekly-planner-container">
       {/* Header */}
@@ -173,7 +204,7 @@ export const WeeklyPlannerView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-4 bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
               <div className="text-right">
                 <div className="text-xs text-slate-400 font-medium">Roadmap Progress</div>
@@ -208,10 +239,10 @@ export const WeeklyPlannerView: React.FC = () => {
         </div>
 
         {/* View Switcher Tabs */}
-        <div className="flex gap-2 mt-5 border-t border-slate-800 pt-4">
+        <div className="flex gap-2 mt-5 border-t border-slate-800 pt-4 flex-wrap">
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
               activeTab === 'timeline'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -222,7 +253,7 @@ export const WeeklyPlannerView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('sunday-gate')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
               activeTab === 'sunday-gate'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -237,7 +268,72 @@ export const WeeklyPlannerView: React.FC = () => {
       {/* 1. Timeline View */}
       {activeTab === 'timeline' && (
         <div className="space-y-4" id="timeline-list">
-          {milestonesList.map((m) => {
+          {/* Search & Month Filter Toolbar */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+            <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full md:w-80">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search goals, deliverables, exit gates..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-900 placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Month Selector */}
+              <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
+                <div className="flex items-center gap-1 text-xs text-slate-500 mr-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Timeline Phase:</span>
+                </div>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                >
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>
+                      {m === 'All' ? 'All Months (1-5)' : m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Status Filter Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+              <span className="text-[11px] font-semibold text-slate-500 mr-1">Status:</span>
+              {(['All', 'Pending', 'Done'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    statusFilter === st
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  {st === 'All' ? `All Weeks (${milestonesList.length})` : st === 'Pending' ? '⏳ Pending' : '✅ Completed'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredMilestones.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-500">
+              <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+              <p className="text-sm font-semibold">No weekly milestones match your filters.</p>
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedMonth('All'); setStatusFilter('All'); }}
+                className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            filteredMilestones.map((m) => {
             const isDone = !!completedWeeks[m.week];
 
             return (
@@ -342,7 +438,7 @@ export const WeeklyPlannerView: React.FC = () => {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       )}
 
