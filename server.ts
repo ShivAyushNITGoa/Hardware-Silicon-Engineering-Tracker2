@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
@@ -315,17 +316,50 @@ Structure your response in crisp, highly structured Markdown:
 
 // Start server with Vite middleware in dev or static files in prod
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  const publicPath = path.join(process.cwd(), 'public');
+  const distPath = path.join(process.cwd(), 'dist');
+  const encyclopediaPath = path.join(process.cwd(), 'Complete_Semiconductor_Engineering_Encyclopedia');
+
+  // Serve static encyclopedia documentation
+  if (fs.existsSync(encyclopediaPath)) {
+    app.use('/encyclopedia', express.static(encyclopediaPath));
+  }
+  if (fs.existsSync(publicPath)) {
+    app.use(express.static(publicPath));
+  }
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+  }
+
+  const hasSrcEntry = fs.existsSync(path.join(process.cwd(), 'src', 'main.tsx'));
+
+  if (process.env.NODE_ENV !== 'production' && hasSrcEntry) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    // SPA fallback route
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API route not found' });
+      }
+
+      const distIndex = path.join(distPath, 'index.html');
+      const publicIndex = path.join(publicPath, 'index.html');
+      const rootIndex = path.join(process.cwd(), 'index.html');
+
+      if (fs.existsSync(distIndex)) {
+        return res.sendFile(distIndex);
+      }
+      if (fs.existsSync(publicIndex)) {
+        return res.sendFile(publicIndex);
+      }
+      if (fs.existsSync(rootIndex)) {
+        return res.sendFile(rootIndex);
+      }
+      res.status(404).send('Not Found');
     });
   }
 
