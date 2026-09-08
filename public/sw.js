@@ -1,4 +1,4 @@
-const CACHE_NAME = 'silicon-tracker-v10';
+const CACHE_NAME = 'silicon-tracker-v12';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/favicon-16x16.png',
   '/favicon-32x32.png',
   '/apple-touch-icon.png',
+  '/app-touch-icon.png',
   '/icon-192.png',
   '/icon-512.png',
   '/icon.png',

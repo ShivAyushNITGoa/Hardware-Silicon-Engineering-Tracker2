@@ -19,7 +19,7 @@ export const GDevelopersIcon: React.FC<{
 }> = ({ className = 'w-8 h-8', size, rounded = true }) => {
   return (
     <img
-      src="/g-icon.svg?v=20260908"
+      src="/g-icon.svg?v=20260908_1301"
       alt="The GDevelopers Icon"
       className={`shrink-0 ${rounded ? 'rounded-[20%]' : ''} ${className} object-contain select-none`}
       style={size ? { width: size, height: size } : undefined}
@@ -27,9 +27,9 @@ export const GDevelopersIcon: React.FC<{
       onError={(e) => {
         const target = e.currentTarget;
         if (target.src.includes('g-icon.svg')) {
-          target.src = '/G%20icon.svg?v=20260908';
+          target.src = '/G%20icon.svg?v=20260908_1301';
         } else if (!target.src.includes('.png')) {
-          target.src = '/G%20icon.png?v=20260908';
+          target.src = '/G%20icon.png?v=20260908_1301';
         }
       }}
     />
@@ -47,7 +47,7 @@ export const BrandLogoImage: React.FC<{
 }> = ({ className = 'h-8 w-auto', height, alt = 'The GDevelopers' }) => {
   return (
     <img
-      src="/logo.png?v=20260908"
+      src="/logo.png?v=20260908_1301"
       alt={alt}
       className={`object-contain shrink-0 select-none ${className}`}
       style={height ? { height } : undefined}
@@ -55,7 +55,7 @@ export const BrandLogoImage: React.FC<{
       onError={(e) => {
         const target = e.currentTarget;
         if (!target.src.includes('.svg')) {
-          target.src = '/logo.svg?v=20260908';
+          target.src = '/logo.svg?v=20260908_1301';
         }
       }}
     />
@@ -103,8 +103,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const isDark = theme === 'dark';
   const isLight = theme === 'light';
 
-  // "The" in signature Brand Olive-Lime Green (#9EB613)
-  const theColor = 'text-[#9EB613]';
+  // "The" in signature Brand Olive-Lime Green (#b0b91a)
+  const theColor = 'text-[#b0b91a]';
   // "GDevelopers" in high-contrast slate/white or light beige matching logo.png
   const devColor = isDark ? 'text-white' : isLight ? 'text-neutral-950' : 'text-neutral-900 dark:text-white';
   const subColor = isDark ? 'text-neutral-300' : isLight ? 'text-neutral-600' : 'text-neutral-600 dark:text-neutral-300';
