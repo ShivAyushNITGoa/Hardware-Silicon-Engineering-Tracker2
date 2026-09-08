@@ -41,6 +41,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Explicit favicon and icon route handlers with immediate revalidation
+app.get('/favicon.ico', (req, res) => {
+  const icoPath = path.join(process.cwd(), 'public', 'favicon.ico');
+  if (fs.existsSync(icoPath)) {
+    res.setHeader('Content-Type', 'image/x-icon');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    return res.sendFile(icoPath);
+  }
+  res.status(404).end();
+});
+
 // Helper to generate with model fallback and resilience against 503 / high demand spikes
 async function generateWithFallback(ai: GoogleGenAI, prompt: string): Promise<string | null> {
   // Use distinct model tiers from Google GenAI SDK

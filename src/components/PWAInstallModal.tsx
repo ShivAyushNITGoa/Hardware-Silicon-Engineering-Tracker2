@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Cpu, Wifi, WifiOff, CheckCircle2, Download, RefreshCw, Share2, PlusSquare, Info } from 'lucide-react';
+import { X, Wifi, WifiOff, CheckCircle2, Download, RefreshCw, Share2, PlusSquare, Info } from 'lucide-react';
+import { GDevelopersIcon } from './BrandLogo';
 
 interface PWAInstallModalProps {
   isOpen: boolean;
@@ -57,9 +58,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3.5 mb-5">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Cpu className="w-6 h-6 text-white" />
-          </div>
+          <GDevelopersIcon className="w-12 h-12 rounded-xl shadow-lg shadow-black/30" />
           <div>
             <h2 className="text-lg font-bold text-neutral-100">Install Silicon Career Tracker PWA</h2>
             <p className="text-xs text-neutral-400 flex items-center gap-1.5 mt-0.5">

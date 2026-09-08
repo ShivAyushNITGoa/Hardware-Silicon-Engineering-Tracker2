@@ -19,15 +19,17 @@ export const GDevelopersIcon: React.FC<{
 }> = ({ className = 'w-8 h-8', size, rounded = true }) => {
   return (
     <img
-      src="/G%20icon.svg"
+      src="/g-icon.svg?v=20260908"
       alt="The GDevelopers Icon"
       className={`shrink-0 ${rounded ? 'rounded-[20%]' : ''} ${className} object-contain select-none`}
       style={size ? { width: size, height: size } : undefined}
       loading="eager"
       onError={(e) => {
         const target = e.currentTarget;
-        if (!target.src.includes('.png')) {
-          target.src = '/G%20icon.png';
+        if (target.src.includes('g-icon.svg')) {
+          target.src = '/G%20icon.svg?v=20260908';
+        } else if (!target.src.includes('.png')) {
+          target.src = '/G%20icon.png?v=20260908';
         }
       }}
     />
@@ -45,7 +47,7 @@ export const BrandLogoImage: React.FC<{
 }> = ({ className = 'h-8 w-auto', height, alt = 'The GDevelopers' }) => {
   return (
     <img
-      src="/logo.png"
+      src="/logo.png?v=20260908"
       alt={alt}
       className={`object-contain shrink-0 select-none ${className}`}
       style={height ? { height } : undefined}
@@ -53,7 +55,7 @@ export const BrandLogoImage: React.FC<{
       onError={(e) => {
         const target = e.currentTarget;
         if (!target.src.includes('.svg')) {
-          target.src = '/logo.svg';
+          target.src = '/logo.svg?v=20260908';
         }
       }}
     />

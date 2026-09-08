@@ -1,16 +1,22 @@
-const CACHE_NAME = 'silicon-tracker-v6';
+const CACHE_NAME = 'silicon-tracker-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/favicon.ico',
   '/favicon.svg',
   '/favicon.png',
+  '/favicon-16x16.png',
+  '/favicon-32x32.png',
+  '/apple-touch-icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
   '/icon.png',
   '/icon.svg',
-  '/G%20icon.svg',
-  '/G%20icon.png',
   '/g-icon.svg',
   '/g-icon.png',
+  '/G%20icon.svg',
+  '/G%20icon.png',
   '/logo.svg',
   '/logo.png'
 ];
@@ -104,19 +110,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Other static assets (images, icons, svgs): Cache-first with network fallback
+  // Static assets (images, icons, svgs): Network-first with cache fallback
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const copy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
         return networkResponse;
-      });
-    })
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return new Response('Offline asset unavailable', { status: 503 });
+      })
   );
 });
