@@ -327,9 +327,6 @@ async function startServer() {
   if (fs.existsSync(publicPath)) {
     app.use(express.static(publicPath));
   }
-  if (fs.existsSync(distPath)) {
-    app.use(express.static(distPath));
-  }
 
   const hasSrcEntry = fs.existsSync(path.join(process.cwd(), 'src', 'main.tsx'));
 
@@ -340,6 +337,9 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+    }
     // SPA fallback route
     app.get('*', (req, res) => {
       if (req.path.startsWith('/api')) {

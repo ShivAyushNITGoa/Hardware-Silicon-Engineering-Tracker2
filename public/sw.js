@@ -1,4 +1,4 @@
-const CACHE_NAME = 'silicon-tracker-v1';
+const CACHE_NAME = 'silicon-tracker-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -7,7 +7,7 @@ const STATIC_ASSETS = [
   '/icon.svg'
 ];
 
-// Install: pre-cache application shell
+// Install: immediately activate new service worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: clean up old caches
+// Activate: clean up ALL old caches immediately and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -33,16 +33,23 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Stale-while-revalidate for assets & navigation fallback
+// Support manual skip waiting
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Fetch: Network-First for HTML and JS/CSS scripts so code updates are instant
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests and chrome-extension / external cross-origin APIs
+  // Skip non-GET requests
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // If request is for an API route, use network only or network-first
+  // API requests: Network only
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -55,8 +62,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (HTML)
-  if (event.request.mode === 'navigate') {
+  // Network-First for navigation and code assets
+  if (
+    event.request.mode === 'navigate' ||
+    event.request.destination === 'script' ||
+    event.request.destination === 'style' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.tsx') ||
+    url.pathname.endsWith('.ts')
+  ) {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
@@ -71,29 +86,29 @@ self.addEventListener('fetch', (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          const shellResponse = await caches.match('/');
-          return shellResponse || new Response('Offline - App ready in local cache', { status: 200, headers: { 'Content-Type': 'text/html' } });
+          if (event.request.mode === 'navigate') {
+            const shell = await caches.match('/');
+            if (shell) return shell;
+          }
+          return new Response('Offline resource unavailable', { status: 503 });
         })
     );
     return;
   }
 
-  // Static assets: Stale-While-Revalidate
+  // Other static assets (images, icons, svgs): Cache-first with network fallback
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            const copy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Silent fallback when network is unavailable
-        });
-
-      return cachedResponse || fetchPromise;
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const copy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return networkResponse;
+      });
     })
   );
 });
