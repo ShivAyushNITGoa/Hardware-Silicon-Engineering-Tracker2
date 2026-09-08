@@ -58,15 +58,9 @@ const STORAGE_KEYS = {
 export function getNitGoaProgress(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.NIT_GOA_PROGRESS);
-    return raw ? JSON.parse(raw) : {
-      'p1-1': true, // Before 6th Sem: Verilog basics
-      'p1-2': true, // Digital design revision
-      'p1-3': true, // Simulation workflow setup
-      'p1-4': true, // Small RTL modules
-      'ee541-comp': true // EE541 Embedded Systems 5th sem completed
-    };
+    return raw ? JSON.parse(raw) : {};
   } catch (e) {
-    return { 'p1-1': true, 'p1-2': true, 'p1-3': true, 'p1-4': true, 'ee541-comp': true };
+    return {};
   }
 }
 

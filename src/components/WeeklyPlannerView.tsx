@@ -44,7 +44,7 @@ export const WeeklyPlannerView: React.FC<WeeklyPlannerViewProps> = ({ onNavigate
   // Sunday audit form
   const [hoursLogged, setHoursLogged] = useState<number>(18);
   const [topicsDone, setTopicsDone] = useState<number>(4);
-  const [repoCommitsUrl, setRepoCommitsUrl] = useState<string>('github.com/ayush/silicon-workspace');
+  const [repoCommitsUrl, setRepoCommitsUrl] = useState<string>('github.com/your-username/silicon-workspace');
   const [blockersFaced, setBlockersFaced] = useState<string>('Setup timing violation on multiplier path');
   const [nextCommitment, setNextCommitment] = useState<string>('Tapeout prep and Cocotb regression suite');
 

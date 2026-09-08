@@ -238,8 +238,11 @@ export default function App() {
               H
             </div>
             <div className="hidden sm:block">
-              <span className="text-xs font-bold tracking-tight text-neutral-900 group-hover:text-neutral-700">
+              <span className="text-xs font-bold tracking-tight text-neutral-900 group-hover:text-neutral-700 block leading-tight">
                 Hardware &amp; Silicon Tracker
+              </span>
+              <span className="text-[10px] text-neutral-400 font-medium block leading-none">
+                by Ayush Kumar
               </span>
             </div>
           </div>
@@ -357,16 +360,16 @@ export default function App() {
                 <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    Target Mission
+                    Silicon Engineering OS
                   </div>
                   <p className="text-[11px] text-neutral-600 leading-snug">
-                    RTL Design &bull; Verification &bull; FPGA &bull; Embedded
+                    Curated &amp; Architected by <span className="font-semibold text-neutral-900">Ayush Kumar</span>
                   </p>
                 </div>
               </div>
             ) : (
               <div className="pt-2 border-t border-neutral-100 flex justify-center">
-                <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-500" title="Target: RTL & Verification">
+                <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-500" title="Silicon OS by Ayush Kumar">
                   <Zap className="w-4 h-4 text-amber-500" />
                 </div>
               </div>
@@ -392,7 +395,10 @@ export default function App() {
                     <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs">
                       H
                     </div>
-                    <span className="text-xs font-bold text-neutral-900">Silicon Tracker</span>
+                    <div>
+                      <span className="text-xs font-bold text-neutral-900 block leading-tight">Silicon Tracker</span>
+                      <span className="text-[10px] text-neutral-500 block leading-none">by Ayush Kumar</span>
+                    </div>
                   </div>
                   <button
                     onClick={() => setIsMobileDrawerOpen(false)}
@@ -412,7 +418,7 @@ export default function App() {
               <div className="pt-4 border-t border-neutral-100">
                 <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200 text-center text-xs text-neutral-600">
                   <div className="font-bold text-neutral-900">Silicon Engineering Hub</div>
-                  <div className="text-[11px] text-neutral-500 mt-0.5">18 Vols &bull; 10 Specializations</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">Author &amp; Curator: Ayush Kumar</div>
                 </div>
               </div>
             </div>

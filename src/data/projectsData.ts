@@ -16,11 +16,11 @@ export const flagshipProjects: FlagshipProject[] = [
     ],
     "validation": "Oscilloscope ISR timing verification (<5us), 48-hour continuous packet stress test with 0 drops.",
     "metrics": "Telemetry Latency: <120ms | WiFi Reconnect: <2.8s | Sleep Current: <45uA | Zero Memory Leaks over 48h.",
-    "githubEvidence": "github.com/ayush/fireguard-v2-firmware (Complete with Architecture Diagram, Doxygen API docs, FreeRTOS trace)",
+    "githubEvidence": "github.com/<your-username>/fireguard-v2-firmware (Complete with Architecture Diagram, Doxygen API docs, FreeRTOS trace)",
     "demoRequirement": "Live physical bench demonstration with simulated sensor triggers, WiFi drop recovery, and real-time cloud alert dashboard.",
     "resumeBullet": "Architected production-grade multi-threaded FreeRTOS firmware on ESP32-S3 for IoT safety monitoring; implemented atomic ring-buffer spooling to ensure 0% data loss across network disconnects while cutting sleep power by 68%.",
     "targetWeek": "W1-W4",
-    "jageshwarComparison": "Jageshwar: Basic Arduino code, no RTOS, no testbench. Ayush: Layered HAL, FreeRTOS, 0-drop spooling, power profile."
+    "jageshwarComparison": "Typical Project: Basic Arduino code, no RTOS, no testbench. Production Benchmark: Layered HAL, FreeRTOS, 0-drop spooling, power profile."
   },
   {
     "id": "rtl-ip-library",
@@ -37,11 +37,11 @@ export const flagshipProjects: FlagshipProject[] = [
     ],
     "validation": "Verilator lint clean (0 warnings), 100% SVA assertion pass, timing closed at 150MHz in Vivado.",
     "metrics": "Operating Frequency: 150MHz+ | Inferred Latches: 0 | Test Coverage: 100% line & branch | CDC Violations: 0.",
-    "githubEvidence": "github.com/ayush/systemverilog-rtl-ip-library (Includes Makefile, cocotb testbenches, GTKWave scripts, XDC constraints)",
+    "githubEvidence": "github.com/<your-username>/systemverilog-rtl-ip-library (Includes Makefile, cocotb testbenches, GTKWave scripts, XDC constraints)",
     "demoRequirement": "Terminal script running 1-command regression test with colorful pass metrics + GTKWave waveform capture video.",
     "resumeBullet": "Engineered reusable SystemVerilog IP library (UART, SPI Master, Async Dual-Clock FIFO with Gray pointers); created Python cocotb testbenches running 100k randomized transactions and closed timing at 150MHz on Xilinx Artix-7.",
     "targetWeek": "W4-W8",
-    "jageshwarComparison": "Jageshwar: Copies generic Verilog from GitHub without tests. Ayush: Parameterized SV, CDC safe, cocotb regression, 150MHz timing closed."
+    "jageshwarComparison": "Typical Project: Copies generic Verilog from web without tests. Production Benchmark: Parameterized SV, CDC safe, cocotb regression, 150MHz timing closed."
   },
   {
     "id": "rv32i-soc",
@@ -58,11 +58,11 @@ export const flagshipProjects: FlagshipProject[] = [
     ],
     "validation": "Passes official RISC-V architectural compliance test suite; runs Fibonacci, Matrix Multiply, and Hello World over UART.",
     "metrics": "CPI: ~1.15 on arithmetic loops | Fmax: 100MHz on Artix-7 | Compliance: 100% pass on RV32I test suite.",
-    "githubEvidence": "github.com/ayush/rv32i-pipelined-soc (Includes ISA compliance test logs, C compiler scripts, memory map linker script, block diagram)",
+    "githubEvidence": "github.com/<your-username>/rv32i-pipelined-soc (Includes ISA compliance test logs, C compiler scripts, memory map linker script, block diagram)",
     "demoRequirement": "Video showing C code compilation, bitstream loading, and real-time execution printing text to serial terminal on FPGA.",
     "resumeBullet": "Designed 5-stage pipelined RV32I processor core with hazard forwarding and MMIO peripherals; passed 100% official RISC-V architectural compliance tests and booted bare-metal C applications at 100MHz on FPGA fabric.",
     "targetWeek": "W9-W13",
-    "jageshwarComparison": "Jageshwar: Never built a CPU or understands forwarding. Ayush: Complete 5-stage pipeline with MMIO running real compiled C firmware."
+    "jageshwarComparison": "Typical Project: Never built a CPU or understands hazard forwarding. Production Benchmark: Complete 5-stage pipeline with MMIO running real compiled C firmware."
   },
   {
     "id": "edge-ai-accelerator",
@@ -79,11 +79,11 @@ export const flagshipProjects: FlagshipProject[] = [
     ],
     "validation": "Bit-exact verification against Python fixed-point model across 50,000 test vectors.",
     "metrics": "Hardware Speedup: 8.4x over ARM Cortex-M4 | Latency: <18us per inference | Accuracy Retention: >98.2% vs FP32.",
-    "githubEvidence": "github.com/ayush/fpga-edge-ai-accelerator (Includes PyTorch quantization scripts, SystemVerilog RTL, AXI testbench, latency benchmark sheet)",
+    "githubEvidence": "github.com/<your-username>/fpga-edge-ai-accelerator (Includes PyTorch quantization scripts, SystemVerilog RTL, AXI testbench, latency benchmark sheet)",
     "demoRequirement": "Live side-by-side execution demo comparing ARM CPU software inference vs FPGA hardware accelerator latency on oscilloscope.",
     "resumeBullet": "Architected AXI4-connected Edge-AI fixed-point hardware accelerator for time-series anomaly inference; achieved 8.4x speedup and 18us latency over Cortex-M4 with 98.2% accuracy retention using custom DSP48 pipelined MAC arrays.",
     "targetWeek": "W14-W20",
-    "jageshwarComparison": "Jageshwar: Runs slow Python scripts on Raspberry Pi. Ayush: Custom silicon accelerator with fixed-point DSP math and measured latency speedup."
+    "jageshwarComparison": "Typical Project: Runs slow Python scripts on Raspberry Pi. Production Benchmark: Custom silicon accelerator with fixed-point DSP math and measured latency speedup."
   }
 ];
 
@@ -143,7 +143,7 @@ export const goldenRules: RuleItem[] = [
   {
     "id": "R2",
     "rule": "No tutorial-only completion",
-    "meaning": "A topic is strictly incomplete until Ayush builds, tests, and validates something in code or silicon.",
+    "meaning": "A topic is strictly incomplete until you build, test, and validate something in code or silicon.",
     "action": "Every concept requires an accompanying testbench, schematic, or working driver.",
     "checkFrequency": "Every Topic"
   },

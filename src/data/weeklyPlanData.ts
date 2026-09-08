@@ -54,7 +54,7 @@ export const weeklyMilestones: WeeklyMilestoneItem[] = [
       "Generate Doxygen API documentation and clean architectural block diagrams.",
       "Record 3-minute physical bench demo video showing fault recovery."
     ],
-    "deliverable": "Public GitHub repo github.com/ayush/fireguard-v2-firmware with demo GIF and test logs.",
+    "deliverable": "Public GitHub repo github.com/<your-username>/fireguard-v2-firmware with demo GIF and test logs.",
     "exitGate": "Sunday Gate: Flagship #1 officially SHIPPED and locked."
   },
   {
@@ -108,7 +108,7 @@ export const weeklyMilestones: WeeklyMilestoneItem[] = [
     "coreGoals": [
       "Add concurrent SystemVerilog Assertions (SVA) for all interface handshakes.",
       "Write Makefile for single-command regression test across all IPs.",
-      "Publish github.com/ayush/systemverilog-rtl-ip-library with timing and utilization tables."
+      "Publish github.com/<your-username>/systemverilog-rtl-ip-library with timing and utilization tables."
     ],
     "deliverable": "Automated 1-command cocotb regression running 100,000 transactions.",
     "exitGate": "Sunday Gate: Flagship #2 officially SHIPPED and locked."
@@ -180,7 +180,7 @@ export const weeklyMilestones: WeeklyMilestoneItem[] = [
       "Close static timing at 100MHz operating frequency.",
       "Record hardware demo video showing terminal output over USB-UART."
     ],
-    "deliverable": "Published github.com/ayush/rv32i-pipelined-soc with architectural block diagram.",
+    "deliverable": "Published github.com/<your-username>/rv32i-pipelined-soc with architectural block diagram.",
     "exitGate": "Sunday Gate: Flagship #3 officially SHIPPED and locked."
   },
   {
@@ -234,7 +234,7 @@ export const weeklyMilestones: WeeklyMilestoneItem[] = [
     "coreGoals": [
       "Synthesize complete FPGA design and close timing at 125MHz.",
       "Record side-by-side oscilloscope comparison video showing latency speedup.",
-      "Publish github.com/ayush/fpga-edge-ai-accelerator with benchmark plots."
+      "Publish github.com/<your-username>/fpga-edge-ai-accelerator with benchmark plots."
     ],
     "deliverable": "Public GitHub repo with latency, area, and power benchmark sheets.",
     "exitGate": "Sunday Gate: Flagship #4 officially SHIPPED and locked."

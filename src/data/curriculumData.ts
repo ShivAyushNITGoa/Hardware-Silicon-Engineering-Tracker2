@@ -1113,7 +1113,7 @@ export const initialCurriculum: CurriculumTrack[] = [
         "stage": 3,
         "title": "Flagship Edge-AI Capstone Integration",
         "whatToLearn": "End-to-end integration: Sensor -> MCU/CPU -> AXI Data Movement -> FPGA Accelerator -> Decision -> Cloud Dashboard.",
-        "whyItMatters": "Combines Ayush’s existing embedded/IoT strengths with new FPGA/RTL skills to create an unbeatable portfolio proof.",
+        "whyItMatters": "Combines hands-on embedded/IoT hardware strengths with synthesizable FPGA/RTL skills to create an unbeatable portfolio proof.",
         "practiceExercise": "Connect physical sensor to host MCU, stream data into FPGA accelerator, and publish telemetry.",
         "buildDeliverable": "Flagship Edge-AI Hardware/Software Co-Design Capstone.",
         "howToTest": "Run 5 consecutive end-to-end physical demos with latency and power measurements.",

@@ -29,7 +29,9 @@ import {
   Check,
   CheckCheck,
   Table,
-  LayoutGrid
+  LayoutGrid,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { MASTER_SUBDOMAINS, getSubdomainsBySuperDomain, ALL_SUBDOMAINS } from '../data/classificationData';
 import { ClassificationType, SubdomainDetail, JobProfileClassification, SkillProfileClassification, KnowledgeProfileClassification } from '../types';
@@ -60,6 +62,9 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
   // View mode: Cards vs Dense Matrix Table vs Silicon Lifecycle Flow
   const [viewMode, setViewMode] = useState<'cards' | 'matrix_table' | 'silicon_flow'>('cards');
 
+  // Selected stage number in Silicon Lifecycle Flow (01 to 10)
+  const [selectedStageNum, setSelectedStageNum] = useState<string>('01');
+
   // Modals
   const [inspectDossierId, setInspectDossierId] = useState<string | null>(null);
   const [isComparatorOpen, setIsComparatorOpen] = useState<boolean>(false);
@@ -70,9 +75,11 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
     return getSubdomainsBySuperDomain(selectedDomain);
   }, [selectedDomain]);
 
-  // Ensure selected subdomain is valid
+  // Ensure selected subdomain is valid across all subdomains
   const currentSubdomain: SubdomainDetail = useMemo(() => {
-    const found = availableSubdomains.find(s => s.id === selectedSubdomainId);
+    let found = availableSubdomains.find(s => s.id === selectedSubdomainId);
+    if (found) return found;
+    found = ALL_SUBDOMAINS.find(s => s.id === selectedSubdomainId);
     if (found) return found;
     return availableSubdomains[0] || MASTER_SUBDOMAINS[0];
   }, [availableSubdomains, selectedSubdomainId]);
@@ -120,19 +127,153 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
     );
   }, [currentSubdomain, searchQuery]);
 
-  // Silicon lifecycle 10-stage pipeline data
-  const siliconLifecycleStages = [
-    { num: '01', title: 'Architecture & Spec', subdomainId: 'frontend', role: 'SoC Architect', desc: 'Define ISA, AMBA interconnects, and microarchitecture block boundaries.' },
-    { num: '02', title: 'RTL Microarchitecture', subdomainId: 'frontend', role: 'RTL Design Engineer', desc: 'FSMs, synthesizable SystemVerilog, datapath pipelining, and clock gating.' },
-    { num: '03', title: 'Pre-Silicon Verification', subdomainId: 'frontend', role: 'Design Verification Engineer', desc: 'UVM testbenches, constrained-random stimulus, assertions (SVA), 100% coverage.' },
-    { num: '04', title: 'Analog / Mixed-Signal', subdomainId: 'analog-mixed-signal', role: 'AMS IC Designer', desc: 'Transistor-level schematics in Cadence Virtuoso, Bandgaps, PLLs, ADCs, and LDOs.' },
-    { num: '05', title: 'Logic Synthesis & STA', subdomainId: 'backend', role: 'Synthesis / STA Engineer', desc: 'RTL to gate-level netlist in Synopsys Design Compiler with SDC timing constraints.' },
-    { num: '06', title: 'P&R / CTS / Routing', subdomainId: 'backend', role: 'Physical Design Engineer', desc: 'Floorplanning, clock tree synthesis (CTS), power grid routing in Innovus/ICC2.' },
-    { num: '07', title: 'Physical Signoff & Tapeout', subdomainId: 'backend', role: 'Signoff Engineer', desc: 'Calibre DRC/LVS, dummy metal fill, Antenna signoff, and GDSII generation.' },
-    { num: '08', title: 'Silicon Bringup & ATE', subdomainId: 'post-silicon-validation', role: 'Validation / ATE Engineer', desc: 'Wafer probe test patterns, lab oscilloscopes, thermal chambers, and silicon bug hunting.' },
-    { num: '09', title: 'Board Support Package (BSP)', subdomainId: 'embedded-baremetal', role: 'Baremetal / BSP Engineer', desc: 'Bootloaders, peripheral register maps, interrupt controllers, and hardware bringup.' },
-    { num: '10', title: 'Embedded RTOS & Safety', subdomainId: 'embedded-automotive-safety', role: 'Embedded Systems Engineer', desc: 'FreeRTOS/Zephyr, ISO 26262 ASIL-D fault mitigation, MISRA-C compliance.' }
-  ];
+  // Silicon lifecycle 10-stage pipeline data with comprehensive engineering metadata
+  const siliconLifecycleStages = useMemo(() => [
+    { 
+      num: '01', 
+      title: 'Architecture & Spec', 
+      subdomainId: 'frontend', 
+      role: 'SoC Architect', 
+      desc: 'Define ISA, AMBA interconnects, cache hierarchies, and microarchitecture block boundaries.',
+      tools: ['Python', 'SystemC', 'ArchC', 'Gem5', 'QEMU'],
+      standards: ['AMBA AXI5 / ACE', 'RISC-V Privileged Spec', 'PCIe 5.0 / CXL'],
+      deliverable: 'Microarchitecture Specification & Cycle-Accurate C/SystemC Simulator'
+    },
+    { 
+      num: '02', 
+      title: 'RTL Microarchitecture', 
+      subdomainId: 'frontend', 
+      role: 'RTL Design Engineer', 
+      desc: 'FSM state machines, synthesizable SystemVerilog, datapath pipelining, and clock gating.',
+      tools: ['SystemVerilog (IEEE 1800)', 'Verilator', 'Synopsys SpyGlass Lint', 'CDC/RDC'],
+      standards: ['IEEE 1800-2017', 'Clock Domain Crossing (CDC)', 'UPF 3.0 Low Power'],
+      deliverable: 'Synthesizable, Lint-Clean & CDC-Clean SystemVerilog RTL Codebase'
+    },
+    { 
+      num: '03', 
+      title: 'Pre-Silicon Verification', 
+      subdomainId: 'frontend', 
+      role: 'Design Verification Engineer', 
+      desc: 'UVM testbenches, constrained-random stimulus, assertions (SVA), and 100% code/functional coverage.',
+      tools: ['Cadence Xcelium', 'Synopsys VCS', 'Siemens QuestaSim', 'cocotb', 'UVM 1.2'],
+      standards: ['IEEE 1800.2 UVM', 'SystemVerilog Assertions (SVA)', 'Functional Coverage Model'],
+      deliverable: 'Constrained-Random Testbench Environment & 100% Functional Coverage Signoff'
+    },
+    { 
+      num: '04', 
+      title: 'Analog / Mixed-Signal', 
+      subdomainId: 'analog-mixed-signal', 
+      role: 'AMS IC Designer', 
+      desc: 'Transistor-level schematics in Cadence Virtuoso, Bandgaps, PLLs, high-speed ADCs, and LDOs.',
+      tools: ['Cadence Virtuoso', 'Spectre SPICE', 'AMS Designer', 'Calibre DRC/LVS'],
+      standards: ['Foundry PDK Rules', 'Monte Carlo PVT Corners', 'Eye Diagram / Jitter Specs'],
+      deliverable: 'Silicon-Proven Transistor Schematics, Testbench Corners & Custom Layouts'
+    },
+    { 
+      num: '05', 
+      title: 'Logic Synthesis & STA', 
+      subdomainId: 'backend', 
+      role: 'Synthesis / STA Engineer', 
+      desc: 'RTL to gate-level netlist in Synopsys Design Compiler with multi-corner SDC timing constraints.',
+      tools: ['Synopsys Design Compiler / Fusion Compiler', 'Cadence Genus', 'PrimeTime'],
+      standards: ['SDC 2.1 Timing Constraints', 'Liberty (.lib) Timing Models', 'OCV / AOCV Derates'],
+      deliverable: 'Mapped Gate-Level Netlist, Zero Setup/Hold Slack Violations & SDC Signoff'
+    },
+    { 
+      num: '06', 
+      title: 'P&R / CTS / Routing', 
+      subdomainId: 'backend', 
+      role: 'Physical Design Engineer', 
+      desc: 'Floorplanning, clock tree synthesis (CTS), power grid routing in Innovus/ICC2, and IR-drop closure.',
+      tools: ['Cadence Innovus', 'Synopsys IC Compiler II (ICC2)', 'PrimeTime SI', 'Voltus / RedHawk'],
+      standards: ['LEF / DEF Specifications', 'Foundry DRC / DFM Rules', 'IR-Drop EM Limits (<2% VDD)'],
+      deliverable: 'Complete Routed Silicon Layout, Clock Mesh / H-Tree & Power Distribution Grid'
+    },
+    { 
+      num: '07', 
+      title: 'Physical Signoff & Tapeout', 
+      subdomainId: 'backend', 
+      role: 'Signoff Engineer', 
+      desc: 'Calibre DRC/LVS, dummy metal fill, Antenna signoff, and GDSII generation for foundry tapeout.',
+      tools: ['Siemens Calibre (DRC, LVS, PEX, PERC)', 'StarRC Extraction', 'KLayout'],
+      standards: ['Foundry TSMC / GF DRM', 'Clean LVS Rule Decks', 'GDSII / OASIS Format'],
+      deliverable: '100% Calibre DRC/LVS Clean Tapeout Database & GDSII Mask Signoff to Foundry'
+    },
+    { 
+      num: '08', 
+      title: 'Silicon Bringup & ATE', 
+      subdomainId: 'post-silicon-validation', 
+      role: 'Validation / ATE Engineer', 
+      desc: 'Wafer probe test patterns, lab oscilloscopes, thermal chambers, and post-silicon bug hunting.',
+      tools: ['Keysight Infiniium Oscilloscope', 'Advantest 93000 ATE', 'JTAG / OpenOCD', 'Python Automation'],
+      standards: ['IEEE 1149.1 JTAG', 'DFT Scan Chains', 'Shmoo Plot Voltage/Frequency Characterization'],
+      deliverable: 'Post-Silicon Characterization Matrix, Shmoo Curves & Production Test Vectors'
+    },
+    { 
+      num: '09', 
+      title: 'Board Support Package (BSP)', 
+      subdomainId: 'embedded-baremetal', 
+      role: 'Baremetal / BSP Engineer', 
+      desc: 'Bootloaders, peripheral register maps, interrupt controllers, and custom hardware bringup.',
+      tools: ['GNU Arm Embedded Toolchain', 'Segger J-Link', 'Saleae Logic Analyzer', 'Make / CMake'],
+      standards: ['CMSIS Hardware Abstraction', 'Memory-Mapped I/O Register Maps', 'MISRA-C:2012'],
+      deliverable: 'Baremetal Bootloader, Peripheral HAL Drivers (SPI, I2C, UART) & Interrupt Vectors'
+    },
+    { 
+      num: '10', 
+      title: 'Embedded RTOS & Safety', 
+      subdomainId: 'embedded-automotive-safety', 
+      role: 'Embedded Systems Engineer', 
+      desc: 'FreeRTOS/Zephyr, ISO 26262 ASIL-D fault mitigation, and MISRA-C safe task scheduling.',
+      tools: ['FreeRTOS Kernel', 'Zephyr RTOS', 'Percepio Tracealyzer', 'Vector CANoe'],
+      standards: ['ISO 26262 Functional Safety (ASIL-D)', 'AUTOSAR Classic', 'IEC 61508'],
+      deliverable: 'Deterministic Hard Real-Time Firmware with Zero Priority Inversion & Safety Watchdogs'
+    }
+  ], []);
+
+  // Currently selected lifecycle stage
+  const selectedStage = useMemo(() => {
+    return siliconLifecycleStages.find(s => s.num === selectedStageNum) || siliconLifecycleStages[0];
+  }, [siliconLifecycleStages, selectedStageNum]);
+
+  const selectedStageSubdomain = useMemo(() => {
+    return ALL_SUBDOMAINS.find(s => s.id === selectedStage.subdomainId) || currentSubdomain;
+  }, [selectedStage, currentSubdomain]);
+
+  const selectedStageDossier = useMemo(() => {
+    return SUBDOMAIN_DOSSIERS[selectedStage.subdomainId];
+  }, [selectedStage]);
+
+  // Stage selection handler with domain synchronization
+  const handleSelectStage = (stage: typeof siliconLifecycleStages[0]) => {
+    setSelectedStageNum(stage.num);
+    setSelectedSubdomainId(stage.subdomainId);
+    const sub = ALL_SUBDOMAINS.find(s => s.id === stage.subdomainId);
+    if (sub && selectedDomain !== 'all' && sub.domainId !== selectedDomain) {
+      setSelectedDomain('all');
+    }
+  };
+
+  // Inspect Subdomain handler opening technical dossier
+  const handleInspectSubdomain = (subdomainId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setInspectDossierId(subdomainId);
+  };
+
+  // View Subdomain in Matrix Cards
+  const handleViewInMatrixCards = (subdomainId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setSelectedSubdomainId(subdomainId);
+    const sub = ALL_SUBDOMAINS.find(s => s.id === subdomainId);
+    if (sub && selectedDomain !== 'all' && sub.domainId !== selectedDomain) {
+      setSelectedDomain('all');
+    }
+    setViewMode('cards');
+  };
 
   // Quick export matrix as markdown
   const handleCopyMatrixMarkdown = () => {
@@ -357,46 +498,63 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
       {/* VIEW MODE 2: SILICON LIFECYCLE 10-STAGE PIPELINE */}
       {/* ========================================================================= */}
       {viewMode === 'silicon_flow' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50 p-4 rounded-xl border border-neutral-200">
             <div>
               <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider flex items-center gap-2">
                 <GitFork className="w-4 h-4 text-indigo-600" />
                 <span>End-to-End Silicon Lifecycle Flowchart (10 Core Stages)</span>
               </h3>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                From architectural spec definition to foundry tapeout and post-silicon firmware bringup. Click any stage to inspect its subdomain.
+              <p className="text-xs text-neutral-600 mt-0.5">
+                From architectural spec definition to foundry tapeout and post-silicon firmware bringup. Click any stage to select and inspect its subdomain.
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-500 font-medium">Selected:</span>
+              <span className="px-2.5 py-1 rounded-md bg-indigo-600 text-white font-mono text-xs font-bold shadow-2xs">
+                Stage {selectedStage.num}: {selectedStage.title}
+              </span>
             </div>
           </div>
 
+          {/* 10-Stage Flowchart Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {siliconLifecycleStages.map((stage) => {
-              const isCurrent = currentSubdomain.id === stage.subdomainId;
+              const isSelected = selectedStageNum === stage.num;
+              const stageSubdomain = ALL_SUBDOMAINS.find(s => s.id === stage.subdomainId);
 
               return (
                 <div
                   key={stage.num}
-                  onClick={() => {
-                    setSelectedSubdomainId(stage.subdomainId);
-                  }}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-2 ${
-                    isCurrent
-                      ? 'border-indigo-600 bg-indigo-50/70 shadow-xs ring-2 ring-indigo-500/20'
-                      : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-2xs'
+                  id={`silicon-stage-card-${stage.num}`}
+                  onClick={() => handleSelectStage(stage)}
+                  className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-3 relative group ${
+                    isSelected
+                      ? 'border-indigo-600 bg-indigo-50/90 shadow-md ring-2 ring-indigo-500/30'
+                      : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-xs hover:bg-neutral-50/50'
                   }`}
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-indigo-600 px-1.5 py-0.2 rounded bg-indigo-100">
-                        {stage.num}
+                      <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded transition-colors ${
+                        isSelected 
+                          ? 'bg-indigo-600 text-white shadow-2xs' 
+                          : 'bg-indigo-100 text-indigo-700'
+                      }`}>
+                        Stage {stage.num}
                       </span>
-                      <span className="text-[10px] uppercase font-bold text-neutral-400">
-                        Stage
-                      </span>
+                      {isSelected ? (
+                        <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-200/70 px-1.5 py-0.5 rounded">
+                          Selected
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase font-bold text-neutral-400">
+                          Stage
+                        </span>
+                      )}
                     </div>
 
-                    <h4 className="text-xs font-bold text-neutral-900 pt-1">
+                    <h4 className="text-xs font-bold text-neutral-900 group-hover:text-indigo-950 transition-colors pt-0.5">
                       {stage.title}
                     </h4>
 
@@ -404,18 +562,241 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
                       {stage.role}
                     </div>
 
-                    <p className="text-[11px] text-neutral-600 leading-relaxed pt-1">
+                    <p className="text-[11px] text-neutral-600 leading-relaxed">
                       {stage.desc}
                     </p>
+
+                    <div className="text-[10px] text-neutral-500 font-medium pt-0.5">
+                      Subdomain: <span className="text-neutral-800 font-semibold">{stageSubdomain?.name.split(' (')[0]}</span>
+                    </div>
                   </div>
 
-                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-[10px] text-neutral-500">
-                    <span>Inspect Subdomain</span>
-                    <ArrowRight className="w-3 h-3 text-indigo-600" />
+                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between gap-1">
+                    <button
+                      type="button"
+                      id={`inspect-subdomain-btn-${stage.num}`}
+                      onClick={(e) => handleInspectSubdomain(stage.subdomainId, e)}
+                      className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-2xs'
+                          : 'bg-neutral-100 hover:bg-indigo-50 text-neutral-700 hover:text-indigo-700 border border-neutral-200/80 hover:border-indigo-200'
+                      }`}
+                      title={`Inspect ${stageSubdomain?.name || 'Subdomain'} Technical Dossier`}
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>Inspect Subdomain</span>
+                    </button>
+
+                    <ArrowRight className={`w-3 h-3 transition-transform ${
+                      isSelected ? 'text-indigo-600 translate-x-0.5' : 'text-neutral-400 group-hover:text-indigo-600 group-hover:translate-x-0.5'
+                    }`} />
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Active Stage Deep-Dive Inspector Panel */}
+          <div className="bg-gradient-to-br from-indigo-50/70 via-white to-neutral-50 border border-indigo-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+            {/* Header with quick navigation and dossier trigger */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-indigo-100">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-indigo-600 text-white shadow-2xs">
+                    Stage {selectedStage.num} Deep-Dive
+                  </span>
+                  <span className="text-xs font-bold text-neutral-900">
+                    {selectedStage.title}
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    {selectedStage.role}
+                  </span>
+                  <span className="text-[11px] font-medium text-neutral-500">
+                    &bull; Subdomain: <strong className="text-neutral-800">{selectedStageSubdomain.name}</strong>
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 leading-relaxed max-w-2xl">
+                  {selectedStage.desc}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  id={`inspect-stage-dossier-btn-${selectedStage.num}`}
+                  onClick={() => handleInspectSubdomain(selectedStage.subdomainId)}
+                  className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Inspect {selectedStageSubdomain.name.split(' ')[0]} Dossier</span>
+                </button>
+
+                <button
+                  type="button"
+                  id={`view-in-matrix-btn-${selectedStage.num}`}
+                  onClick={() => handleViewInMatrixCards(selectedStage.subdomainId)}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-neutral-300 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5 text-neutral-600" />
+                  <span>View in Matrix Cards</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3-Column Detailed Information Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              {/* Column 1: Deliverables & Standards */}
+              <div className="bg-white p-4 rounded-xl border border-neutral-200/90 shadow-2xs space-y-3">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs uppercase tracking-wide">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>Stage Signoff &amp; Deliverables</span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-neutral-500 block mb-1">
+                    Required Signoff Deliverable:
+                  </span>
+                  <div className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-200 text-[11px] font-medium text-neutral-800 leading-relaxed">
+                    {selectedStage.deliverable}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-neutral-500 block mb-1.5">
+                    Protocols &amp; Compliance Standards:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedStage.standards.map((std, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono text-[10px] font-semibold"
+                      >
+                        {std}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: Industry EDA Suite & Software */}
+              <div className="bg-white p-4 rounded-xl border border-neutral-200/90 shadow-2xs space-y-3">
+                <div className="flex items-center gap-2 text-neutral-900 font-bold text-xs uppercase tracking-wide">
+                  <Wrench className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Core EDA Toolchain</span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-neutral-500 block mb-1.5">
+                    Standard Industrial Tooling:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedStage.tools.map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-1 rounded bg-neutral-100 border border-neutral-200 text-neutral-800 font-medium text-[11px]"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedStageDossier && selectedStageDossier.edaToolCommands && selectedStageDossier.edaToolCommands.length > 0 && (
+                  <div>
+                    <span className="text-[11px] font-semibold text-neutral-500 block mb-1">
+                      Production EDA Command Snippet ({selectedStageDossier.edaToolCommands[0].tool}):
+                    </span>
+                    <div className="p-2 rounded bg-neutral-900 text-neutral-200 font-mono text-[10px] truncate" title={selectedStageDossier.edaToolCommands[0].command}>
+                      {selectedStageDossier.edaToolCommands[0].command}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Column 3: Compensation & Tapeout Risk */}
+              <div className="bg-white p-4 rounded-xl border border-neutral-200/90 shadow-2xs space-y-3">
+                <div className="flex items-center gap-2 text-neutral-900 font-bold text-xs uppercase tracking-wide">
+                  <TrendingUp className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Career &amp; Tapeout Risk Profile</span>
+                </div>
+
+                {selectedStageDossier && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-neutral-500">India CTC (0-2y &rarr; Lead):</span>
+                      <span className="font-mono font-bold text-emerald-700">
+                        {selectedStageDossier.compensationLadder[0].indiaCTC} &rarr; {selectedStageDossier.compensationLadder[2].indiaCTC}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-neutral-500">US Base Compensation:</span>
+                      <span className="font-mono font-bold text-indigo-700">
+                        {selectedStageDossier.compensationLadder[0].usRange}
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-neutral-100">
+                      <span className="text-[11px] font-semibold text-rose-700 mb-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-rose-600" />
+                        Silicon Failure Mode:
+                      </span>
+                      <p className="text-[11px] text-neutral-600 line-clamp-2">
+                        {selectedStageDossier.siliconFailureCaseStudy.failureMode}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Stepper Navigation */}
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                id="prev-silicon-stage-btn"
+                disabled={selectedStageNum === '01'}
+                onClick={() => {
+                  const currentIdx = siliconLifecycleStages.findIndex(s => s.num === selectedStageNum);
+                  if (currentIdx > 0) {
+                    handleSelectStage(siliconLifecycleStages[currentIdx - 1]);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all ${
+                  selectedStageNum === '01'
+                    ? 'border-neutral-200 text-neutral-400 bg-neutral-100 cursor-not-allowed'
+                    : 'border-neutral-300 text-neutral-700 bg-white hover:bg-neutral-100 cursor-pointer shadow-2xs'
+                }`}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous Stage</span>
+              </button>
+
+              <span className="text-xs font-mono text-neutral-500">
+                Stage {selectedStage.num} of 10 &bull; Pipeline Flow
+              </span>
+
+              <button
+                type="button"
+                id="next-silicon-stage-btn"
+                disabled={selectedStageNum === '10'}
+                onClick={() => {
+                  const currentIdx = siliconLifecycleStages.findIndex(s => s.num === selectedStageNum);
+                  if (currentIdx < siliconLifecycleStages.length - 1) {
+                    handleSelectStage(siliconLifecycleStages[currentIdx + 1]);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all ${
+                  selectedStageNum === '10'
+                    ? 'border-neutral-200 text-neutral-400 bg-neutral-100 cursor-not-allowed'
+                    : 'border-neutral-300 text-neutral-700 bg-white hover:bg-neutral-100 cursor-pointer shadow-2xs'
+                }`}
+              >
+                <span>Next Stage</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}

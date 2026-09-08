@@ -176,13 +176,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
         <div className="relative z-10 space-y-2.5 max-w-3xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-neutral-200 backdrop-blur-xs border border-white/10">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Strategic Hardware & Silicon Engineering Roadmap
+            Strategic Hardware &amp; Silicon Engineering OS &bull; Curated by Ayush Kumar
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Ayush's Silicon Career Command Center
+            Ayush Kumar's Silicon Career Command Center
           </h2>
           <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
-            Executing the master roadmap across SystemVerilog, FPGA Architecture, 5-Stage RV32I Processor SoC, Edge-AI Silicon Acceleration, Complete Semiconductor Encyclopedia (336 Modules), and Indian Semiconductor/Startup Pipelines.
+            Universal engineering operating system and structured execution roadmap across SystemVerilog, FPGA Architecture, 5-Stage RV32I Processor SoC, Edge-AI Silicon Acceleration, Complete Semiconductor Encyclopedia (336 Modules), and 80+ Semiconductor Company Pipelines.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-neutral-400">
