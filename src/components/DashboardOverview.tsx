@@ -421,6 +421,69 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
             STA, SVA, SystemVerilog & FreeRTOS.
           </p>
         </div>
+
+        <div 
+          onClick={() => onNavigate('ece_eee_careers')}
+          className="p-3.5 rounded-xl border border-emerald-300 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 hover:border-emerald-400 hover:shadow-2xs transition-all cursor-pointer group col-span-1 sm:col-span-2 lg:col-span-1"
+        >
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-950">
+            <Briefcase className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="truncate">ECE &amp; EEE Careers</span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-200/80 text-emerald-900 font-semibold ml-auto">
+              New
+            </span>
+          </div>
+          <p className="text-[11px] text-emerald-900/90 mt-1">
+            6 Specialized fields beyond VLSI: EV, 5G, Robotics &amp; Grids.
+          </p>
+        </div>
+      </div>
+
+      {/* Comprehensive ECE & EEE Career Options Spotlight Banner */}
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-950 to-neutral-900 rounded-xl p-4 sm:p-5 text-white shadow-sm border border-emerald-800/40 relative overflow-hidden">
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-emerald-500/10 to-transparent pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Beyond VLSI &amp; Embedded Systems
+              </span>
+              <span className="text-[11px] text-emerald-200/70">
+                Strategic Career Intelligence Report
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+              Comprehensive Career Options Report for ECE &amp; EEE
+            </h3>
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              Detailed breakdown of 6 high-demand engineering fields: Telecom &amp; 5G/6G, Signal/Image Processing &amp; CV, Power Electronics &amp; EVs (Massive Demand), Robotics &amp; Automation, Renewable Energy &amp; Smart Grids, and PCB Design &amp; Hardware Engineering. Includes job titles, key technologies, hiring companies, and side-by-side comparative matrices.
+            </p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <span className="text-[10px] bg-white/10 hover:bg-white/15 px-2 py-0.5 rounded text-neutral-200 border border-white/10">Telecom &amp; 5G/6G</span>
+              <span className="text-[10px] bg-white/10 hover:bg-white/15 px-2 py-0.5 rounded text-neutral-200 border border-white/10">DSP &amp; Vision</span>
+              <span className="text-[10px] bg-emerald-400/20 text-emerald-200 px-2 py-0.5 rounded font-semibold border border-emerald-400/30">EVs &amp; Power Electronics (Huge)</span>
+              <span className="text-[10px] bg-white/10 hover:bg-white/15 px-2 py-0.5 rounded text-neutral-200 border border-white/10">Robotics &amp; ROS</span>
+              <span className="text-[10px] bg-white/10 hover:bg-white/15 px-2 py-0.5 rounded text-neutral-200 border border-white/10">Smart Grids &amp; Renewables</span>
+              <span className="text-[10px] bg-white/10 hover:bg-white/15 px-2 py-0.5 rounded text-neutral-200 border border-white/10">PCB Design</span>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
+            <button
+              onClick={() => onNavigate('ece_eee_careers')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap"
+            >
+              <Briefcase className="w-4 h-4 text-neutral-950" />
+              <span>Explore 6 Career Fields</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onNavigate('career_prep')}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 font-semibold text-xs border border-white/15 transition-all cursor-pointer whitespace-nowrap"
+            >
+              <span>View 10 VLSI Tracks</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* NIT Goa EEE -> VLSI Career Strategy Executive Section */}

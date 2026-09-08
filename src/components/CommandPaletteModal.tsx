@@ -17,7 +17,8 @@ import {
   Search, 
   X,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Briefcase
 } from 'lucide-react';
 import { Tab } from '../App';
 
@@ -64,6 +65,78 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       tab: 'career_prep',
       icon: <Cpu className="w-4 h-4 text-cyan-600" />,
       badge: '10 Tracks'
+    },
+    {
+      id: 'tab-ece-eee-careers',
+      title: 'ECE & EEE Career Options Report (Beyond VLSI & Embedded)',
+      subtitle: 'Comprehensive 6 fields: 5G/6G Telecom, DSP/CV, Power Electronics & EV, Robotics, Smart Grids, PCB',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: '6 Fields'
+    },
+    {
+      id: 'tab-ece-eee-prep',
+      title: 'ECE & EEE Preparation Tracks & Toolchains (16-Week Roadmaps)',
+      subtitle: 'Open-source EDA, lab workflows, capstone blueprints, and interview whiteboards for 6 fields',
+      category: 'Specializations',
+      tab: 'ece_eee_prep',
+      icon: <Sparkles className="w-4 h-4 text-emerald-500" />,
+      badge: '16 Wks'
+    },
+    {
+      id: 'tab-ev-power-electronics',
+      title: 'Power Electronics & Electric Vehicles (EVs)',
+      subtitle: 'Inverters, BMS, Motor Drives, SiC/GaN, Tata Motors, Ola, Tesla, Texas Instruments',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: 'Massive Demand'
+    },
+    {
+      id: 'tab-telecom-5g-6g',
+      title: 'Telecommunications & 5G/6G Wireless Networks',
+      subtitle: 'RF Engineering, MIMO, Open RAN, Ericsson, Qualcomm, Nokia, Jio, Airtel',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: 'Telecom'
+    },
+    {
+      id: 'tab-dsp-vision',
+      title: 'Signal & Image Processing / Computer Vision',
+      subtitle: 'FFT/Filter design, Edge AI, OpenCV, Audio/Speech, Medical Imaging, Sony, Bosch',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: 'DSP & CV'
+    },
+    {
+      id: 'tab-robotics-automation',
+      title: 'Robotics & Industrial Automation',
+      subtitle: 'ROS/ROS2, PLC/SCADA, Kinematics, Control Systems, ABB, KUKA, FANUC, GreyOrange',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: 'Robotics'
+    },
+    {
+      id: 'tab-smart-grids-renewables',
+      title: 'Renewable Energy & Smart Grids',
+      subtitle: 'Solar/Wind integration, Grid-tied inverters, SCADA, Microgrids, Schneider, Siemens',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: 'Green Energy'
+    },
+    {
+      id: 'tab-pcb-hardware-eng',
+      title: 'PCB Design & Hardware Engineering',
+      subtitle: 'Altium/KiCad, High-speed signal integrity, EMI/EMC, Schematics, Multilayer routing',
+      category: 'Specializations',
+      tab: 'ece_eee_careers',
+      icon: <Briefcase className="w-4 h-4 text-emerald-600" />,
+      badge: 'Hardware'
     },
     {
       id: 'tab-classification',

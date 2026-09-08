@@ -46,6 +46,7 @@ import { MASTER_ENGINEERING_DOMAINS, SUPER_DOMAINS, getDomainForCareerPrepTrack 
 import { SuperDomainId } from '../types';
 import { NitGoaStrategySection } from './NitGoaStrategySection';
 import { ClassificationMatrixSection } from './ClassificationMatrixSection';
+import { EceEeeCareersView } from './EceEeeCareersView';
 
 export const CareerPrepRoadmapView: React.FC = () => {
   const [tracks, setTracks] = useState<CareerPrepTrack[]>(() => getStoredCareerPrepTracks());
@@ -66,7 +67,7 @@ export const CareerPrepRoadmapView: React.FC = () => {
     'track-digital-design': true,
     'track-rtl-design': true
   });
-  const [activeSubTab, setActiveSubTab] = useState<'tracks' | 'classification' | 'nit_goa_strategy' | 'projects' | 'directory'>('tracks');
+  const [activeSubTab, setActiveSubTab] = useState<'tracks' | 'ece_eee_report' | 'classification' | 'nit_goa_strategy' | 'projects' | 'directory'>('tracks');
 
   // Domain-level statistics for Career Roadmap
   const domainStats = useMemo(() => {
@@ -407,6 +408,21 @@ export const CareerPrepRoadmapView: React.FC = () => {
               <span>10 Specialization Tracks</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-700 ml-1">
                 10
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveSubTab('ece_eee_report')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeSubTab === 'ece_eee_report'
+                  ? 'bg-white text-emerald-900 shadow-2xs'
+                  : 'text-neutral-600 hover:text-emerald-900'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+              <span>ECE &amp; EEE Career Report</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-semibold ml-1">
+                6 Fields
               </span>
             </button>
 
@@ -993,6 +1009,15 @@ export const CareerPrepRoadmapView: React.FC = () => {
               );
             })
           )}
+        </div>
+      )}
+
+      {/* TAB: ECE & EEE COMPREHENSIVE CAREER REPORT (6 SPECIALIZED FIELDS) */}
+      {activeSubTab === 'ece_eee_report' && (
+        <div className="space-y-4">
+          <EceEeeCareersView 
+            onNavigateToCareerPrep={() => setActiveSubTab('tracks')}
+          />
         </div>
       )}
 

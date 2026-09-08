@@ -34,7 +34,8 @@ import {
   Library,
   CheckCircle2,
   Flame,
-  Grid
+  Grid,
+  Briefcase
 } from 'lucide-react';
 
 import { usePWA } from './hooks/usePWA';
@@ -42,6 +43,8 @@ import { PWAInstallModal } from './components/PWAInstallModal';
 import { DashboardOverview } from './components/DashboardOverview';
 import { CurriculumView } from './components/CurriculumView';
 import { CareerPrepRoadmapView } from './components/CareerPrepRoadmapView';
+import { EceEeeCareersView } from './components/EceEeeCareersView';
+import { EceEeePrepTracksView } from './components/EceEeePrepTracksView';
 import { NitGoaStrategySection } from './components/NitGoaStrategySection';
 import { NitGoaReportExportView } from './components/NitGoaReportExportView';
 import { ClassificationMatrixSection } from './components/ClassificationMatrixSection';
@@ -64,6 +67,8 @@ import { flatEncyclopediaDocs } from './data/encyclopediaData';
 export type Tab = 
   | 'dashboard' 
   | 'career_prep'
+  | 'ece_eee_careers'
+  | 'ece_eee_prep'
   | 'classification'
   | 'nit_goa_strategy'
   | 'nit_goa_report'
@@ -82,6 +87,8 @@ export type Tab =
 const TAB_LABELS: Record<Tab, { title: string; category: string }> = {
   dashboard: { title: 'Command Center', category: 'Executive Overview' },
   career_prep: { title: 'Career Prep Roadmap', category: '10 Tracks & Free Platforms' },
+  ece_eee_careers: { title: 'ECE & EEE Career Report', category: 'Beyond VLSI & Embedded • 6 Core Fields' },
+  ece_eee_prep: { title: 'ECE & EEE Prep Tracks', category: '16-Wk Roadmaps, Free EDA, Capstones & Drills' },
   classification: { title: 'Domain Classification', category: 'Frontend / Backend • Jobs, Skills & Knowledge' },
   nit_goa_strategy: { title: 'NIT Goa EEE → VLSI Roadmap', category: '6th Sem Plan & Electives' },
   nit_goa_report: { title: 'Full Academic Strategy Report', category: 'NIT Goa EEE → VLSI • 9 Sections & Export' },
@@ -100,6 +107,7 @@ const TAB_LABELS: Record<Tab, { title: string; category: string }> = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [selectedEceFieldId, setSelectedEceFieldId] = useState<string>('telecom-wireless');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 1024;
@@ -406,6 +414,32 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'ece_eee_careers' && (
+            <div className="animate-in fade-in duration-200">
+              <EceEeeCareersView 
+                onNavigateToCareerPrep={() => handleTabChange('career_prep')}
+                onNavigateToTools={() => handleTabChange('tools')}
+                onNavigateToCurriculum={() => handleTabChange('curriculum')}
+                onNavigateToPrep={(fieldId) => {
+                  if (fieldId) setSelectedEceFieldId(fieldId);
+                  handleTabChange('ece_eee_prep');
+                }}
+              />
+            </div>
+          )}
+
+          {activeTab === 'ece_eee_prep' && (
+            <div className="animate-in fade-in duration-200">
+              <EceEeePrepTracksView
+                initialFieldId={selectedEceFieldId}
+                onNavigateToCareers={(fieldId) => {
+                  handleTabChange('ece_eee_careers');
+                }}
+                onNavigateToTools={() => handleTabChange('tools')}
+              />
+            </div>
+          )}
+
           {activeTab === 'classification' && (
             <div className="animate-in fade-in duration-200">
               <ClassificationMatrixSection 
@@ -592,6 +626,8 @@ function renderNavItems(
   }> = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-4 h-4 shrink-0" />, label: 'Command Center', badge: 'Overview' },
     { id: 'career_prep', icon: <Cpu className="w-4 h-4 shrink-0 text-cyan-600" />, label: 'Career Prep Roadmap', badge: '10 Tracks' },
+    { id: 'ece_eee_careers', icon: <Briefcase className="w-4 h-4 shrink-0 text-emerald-600" />, label: 'ECE & EEE Career Options', badge: '6 Fields' },
+    { id: 'ece_eee_prep', icon: <Sparkles className="w-4 h-4 shrink-0 text-emerald-500" />, label: 'ECE & EEE Prep Tracks', badge: '16 Wks' },
     { id: 'classification', icon: <Layers className="w-4 h-4 shrink-0 text-indigo-600" />, label: 'Domain Classification', badge: 'Job/Skill/Theory' },
     { id: 'nit_goa_strategy', icon: <GraduationCap className="w-4 h-4 shrink-0 text-indigo-600" />, label: 'NIT Goa EEE → VLSI', badge: '6th Sem Plan' },
     { id: 'nit_goa_report', icon: <FileText className="w-4 h-4 shrink-0 text-emerald-600" />, label: 'Academic Report & Export', badge: 'Export .md' },

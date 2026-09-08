@@ -52,7 +52,9 @@ const STORAGE_KEYS = {
   ENCYCLOPEDIA_BOOKMARKS: 'ayush_tracker_encyclopedia_bookmarks_v1',
   NIT_GOA_PROGRESS: 'ayush_tracker_nit_goa_progress_v1',
   NIT_GOA_ELECTIVES: 'ayush_tracker_nit_goa_electives_v1',
-  COLLEGE_PROFILE: 'ayush_tracker_universal_college_profile_v1'
+  COLLEGE_PROFILE: 'ayush_tracker_universal_college_profile_v1',
+  ECE_EEE_PREP_PROGRESS: 'ayush_tracker_ece_eee_prep_progress_v1',
+  ECE_EEE_PREP_BOOKMARKS: 'ayush_tracker_ece_eee_prep_bookmarks_v1'
 };
 
 export const DEFAULT_STUDENT_PROFILE: StudentCollegeProfile = {
@@ -670,5 +672,41 @@ export const resetStoredInterviews = resetStoredInterviewQuestions;
 export const getStoredOutreach = getStoredOutreachTemplates;
 export const saveStoredOutreach = saveStoredOutreachTemplates;
 export const resetStoredOutreach = resetStoredOutreachTemplates;
+
+// --- ECE & EEE Preparation Tracks & Tool Progress ---
+
+export function getEceEeePrepProgress(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ECE_EEE_PREP_PROGRESS);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveEceEeePrepProgress(data: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ECE_EEE_PREP_PROGRESS, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save ECE/EEE prep progress', e);
+  }
+}
+
+export function getEceEeePrepBookmarks(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ECE_EEE_PREP_BOOKMARKS);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveEceEeePrepBookmarks(data: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ECE_EEE_PREP_BOOKMARKS, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save ECE/EEE prep bookmarks', e);
+  }
+}
 
 
