@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 64" width="380" height="64" fill="none">
+  <!-- GDevelopers Squircle Icon -->
+  <g transform="translate(0, 0)">
+    <rect width="64" height="64" rx="13" fill="#9EB613" />
+    <path
+      fill-rule="evenodd"
+      clip-rule="evenodd"
+      d="M 10.667 32.000
+         L 21.333 32.000
+         L 21.333 10.667
+         L 32.000 10.667
+         A 21.333 21.333 0 1 1 10.667 32.000
+         Z
+         M 32.000 21.333
+         A 10.667 10.667 0 0 1 32.000 42.667
+         L 32.000 21.333
+         Z"
+      fill="#FFFFFF"
+    />
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="80" y="45" fill="#9EB613" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="900" letter-spacing="-0.5">The</text>
+  <text x="156" y="45" fill="#DDD6CE" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="900" letter-spacing="-0.5">GDevelopers</text>
+</svg>

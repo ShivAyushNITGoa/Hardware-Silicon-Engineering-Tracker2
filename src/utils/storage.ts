@@ -22,6 +22,7 @@ import { coldOutreachTemplates } from '../data/outreachData';
 import { weeklyMilestones } from '../data/weeklyPlanData';
 import { CareerPrepTrack, initialCareerPrepTracks } from '../data/careerPrepData';
 import { enrichCurriculumTrack, enrichCareerPrepTrack } from '../data/domainsData';
+import { StudentCollegeProfile } from '../data/universalCollegeData';
 
 const STORAGE_KEYS = {
   CHECKED_SUBTOPICS: 'ayush_tracker_checked_subtopics',
@@ -50,8 +51,36 @@ const STORAGE_KEYS = {
   ENCYCLOPEDIA_STUDIED: 'ayush_tracker_encyclopedia_studied_v1',
   ENCYCLOPEDIA_BOOKMARKS: 'ayush_tracker_encyclopedia_bookmarks_v1',
   NIT_GOA_PROGRESS: 'ayush_tracker_nit_goa_progress_v1',
-  NIT_GOA_ELECTIVES: 'ayush_tracker_nit_goa_electives_v1'
+  NIT_GOA_ELECTIVES: 'ayush_tracker_nit_goa_electives_v1',
+  COLLEGE_PROFILE: 'ayush_tracker_universal_college_profile_v1'
 };
+
+export const DEFAULT_STUDENT_PROFILE: StudentCollegeProfile = {
+  collegeTierId: 'nit-goa',
+  collegeName: 'National Institute of Technology Goa (NIT Goa)',
+  department: 'eee',
+  semester: '6th',
+  labAccessTier: 'standard-hardware',
+  targetCareerGoal: 'Tier-1 Silicon MNC',
+  notes: 'Preserved official NIT Goa handbook & EE545 FPGA elective plan'
+};
+
+export function getStudentCollegeProfile(): StudentCollegeProfile {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.COLLEGE_PROFILE);
+    return raw ? JSON.parse(raw) : DEFAULT_STUDENT_PROFILE;
+  } catch (e) {
+    return DEFAULT_STUDENT_PROFILE;
+  }
+}
+
+export function saveStudentCollegeProfile(profile: StudentCollegeProfile) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.COLLEGE_PROFILE, JSON.stringify(profile));
+  } catch (e) {
+    console.error('Failed to save student college profile', e);
+  }
+}
 
 // --- Checkboxes & Micro Progress Trackers ---
 

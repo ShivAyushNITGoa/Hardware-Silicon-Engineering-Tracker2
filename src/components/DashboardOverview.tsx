@@ -33,6 +33,7 @@ import { initialCareerPrepTracks } from '../data/careerPrepData';
 import { flatEncyclopediaDocs } from '../data/encyclopediaData';
 import { MASTER_ENGINEERING_DOMAINS, SUPER_DOMAINS } from '../data/domainsData';
 import { SuperDomainId } from '../types';
+import { BrandLogo } from './BrandLogo';
 import { NitGoaStrategySection } from './NitGoaStrategySection';
 import { ClassificationMatrixSection } from './ClassificationMatrixSection';
 import { 
@@ -173,31 +174,43 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
     <div className="space-y-6">
       {/* Top Banner */}
       <div className="bg-neutral-900 text-white rounded-2xl p-5 sm:p-7 shadow-md relative overflow-hidden">
-        <div className="relative z-10 space-y-2.5 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-neutral-200 backdrop-blur-xs border border-white/10">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Strategic Hardware &amp; Silicon Engineering OS &bull; Curated by Ayush Kumar
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Ayush Kumar's Silicon Career Command Center
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
-            Universal engineering operating system and structured execution roadmap across SystemVerilog, FPGA Architecture, 5-Stage RV32I Processor SoC, Edge-AI Silicon Acceleration, Complete Semiconductor Encyclopedia (336 Modules), and 80+ Semiconductor Company Pipelines.
-          </p>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+          <div className="space-y-2.5 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-xs border border-white/20 shadow-xs">
+              <BrandLogo size="xs" variant="icon" />
+              <span className="text-[#9EB613] font-extrabold">The</span>
+              <span className="text-white font-extrabold">GDevelopers</span>
+              <span className="text-white/40">&bull;</span>
+              <span className="text-neutral-200 font-medium">Hardware &amp; Silicon Engineering OS</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Ayush Kumar's Silicon Career Command Center
+            </h2>
+            <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+              Universal engineering operating system and structured execution roadmap across SystemVerilog, FPGA Architecture, 5-Stage RV32I Processor SoC, Edge-AI Silicon Acceleration, Complete Semiconductor Encyclopedia (336 Modules), and 80+ Semiconductor Company Pipelines.
+            </p>
 
-          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-neutral-400">
-            <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 text-neutral-200">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              {curriculumStats.exitDone}/{curriculumStats.exitTotal} Exit Gates Cleared
-            </span>
-            <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 text-neutral-200">
-              <Library className="w-3.5 h-3.5 text-indigo-400" />
-              {encyclopediaStats.done}/336 Encyclopedia Modules
-            </span>
-            <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 text-neutral-200">
-              <Building2 className="w-3.5 h-3.5 text-cyan-400" />
-              {companiesStats.applied} Applications Active
-            </span>
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-neutral-400">
+              <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 text-neutral-200">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                {curriculumStats.exitDone}/{curriculumStats.exitTotal} Exit Gates Cleared
+              </span>
+              <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 text-neutral-200">
+                <Library className="w-3.5 h-3.5 text-indigo-400" />
+                {encyclopediaStats.done}/336 Encyclopedia Modules
+              </span>
+              <span className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 text-neutral-200">
+                <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                {companiesStats.applied} Applications Active
+              </span>
+            </div>
+          </div>
+
+          {/* Right Brand Badge - ALWAYS VISIBLE across desktop, tablet, and mobile */}
+          <div className="flex flex-col sm:items-end shrink-0 pt-1">
+            <div className="p-3 sm:p-3.5 rounded-xl bg-white/10 border border-white/15 backdrop-blur-md shadow-xs">
+              <BrandLogo size="md" theme="dark" subtitle="Hardware & Silicon Track" />
+            </div>
           </div>
         </div>
       </div>

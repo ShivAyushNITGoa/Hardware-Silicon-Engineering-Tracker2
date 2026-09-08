@@ -1,7 +1,7 @@
 {
-  "name": "Hardware & Silicon Engineering Tracker",
-  "short_name": "Hardware & Silicon",
-  "description": "Master curriculum, tools catalog, and 80+ semiconductor/embedded company internship pipeline tracker for VLSI, RISC-V, and Hardware Engineers.",
+  "name": "The GDevelopers - Hardware & Silicon Engineering Tracker",
+  "short_name": "The GDevelopers",
+  "description": "Comprehensive progress tracker, curriculum breakdown, tools master, and semiconductor/embedded engineering OS by The GDevelopers.",
   "start_url": "/",
   "id": "/",
   "scope": "/",
@@ -14,16 +14,28 @@
   "categories": ["education", "productivity", "utilities", "developer"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "64x64",
+      "src": "/G%20icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/G%20icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [

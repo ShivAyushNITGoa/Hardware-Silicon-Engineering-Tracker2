@@ -56,6 +56,7 @@ import { EcosystemOutreachView } from './components/EcosystemOutreachView';
 import { WeeklyPlannerView } from './components/WeeklyPlannerView';
 import { ResumePortfolioGenerator } from './components/ResumePortfolioGenerator';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { BrandLogo, GDevelopersIcon } from './components/BrandLogo';
 import { getCheckedSubtopics, getStudiedEncyclopediaDocs, getCheckedToolSkills } from './utils/storage';
 import { initialCurriculum } from './data/curriculumData';
 import { flatEncyclopediaDocs } from './data/encyclopediaData';
@@ -115,9 +116,7 @@ export default function App() {
     isInstallable, 
     isInstalled, 
     isOnline, 
-    isUpdateAvailable, 
-    installApp, 
-    updateApp 
+    installApp
   } = usePWA();
 
   // Study Progress Summary for header stats
@@ -199,22 +198,6 @@ export default function App() {
           <span>Offline Mode Active — 100% of study modules, 80+ companies & notes remain fully accessible.</span>
         </div>
       )}
-
-      {/* SW Update Notification Bar */}
-      {isUpdateAvailable && (
-        <div className="bg-cyan-700 text-white px-4 py-2 text-xs font-medium flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            <span>A new update is ready for your Silicon Tracker app!</span>
-          </div>
-          <button
-            onClick={updateApp}
-            className="px-3 py-1 bg-white text-cyan-900 rounded-lg text-xs font-bold hover:bg-neutral-100 transition-colors cursor-pointer"
-          >
-            Reload to Update
-          </button>
-        </div>
-      )}
       
       {/* Top Global Command Header */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-30 px-3 sm:px-5 py-2.5 flex items-center justify-between shadow-2xs">
@@ -232,25 +215,15 @@ export default function App() {
           {/* Brand Logo & Name */}
           <div 
             onClick={() => handleTabChange('dashboard')} 
-            className="flex items-center gap-2 cursor-pointer select-none group shrink-0"
+            className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
           >
-            <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shadow-2xs group-hover:bg-neutral-800 transition-colors">
-              H
-            </div>
-            <div className="hidden sm:block">
-              <span className="text-xs font-bold tracking-tight text-neutral-900 group-hover:text-neutral-700 block leading-tight">
-                Hardware &amp; Silicon Tracker
-              </span>
-              <span className="text-[10px] text-neutral-400 font-medium block leading-none">
-                by Ayush Kumar
-              </span>
-            </div>
+            <BrandLogo size="md" variant="full" theme="light" subtitle="Silicon Engineering OS • Ayush Kumar" />
           </div>
 
           <div className="h-4 w-px bg-neutral-200 hidden sm:block mx-1 shrink-0" />
 
-          {/* Breadcrumb Indicator */}
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500 truncate max-w-[150px] sm:max-w-xs md:max-w-md">
+          {/* Breadcrumb Indicator - hidden on xs phones to guarantee full logo prominence */}
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500 truncate sm:max-w-xs md:max-w-md">
             <span className="hidden md:inline font-medium text-neutral-400">
               {TAB_LABELS[activeTab]?.category || 'Section'}
             </span>
@@ -357,10 +330,10 @@ export default function App() {
             {/* Bottom Target Card (Visible when expanded) */}
             {isSidebarOpen ? (
               <div className="pt-4 border-t border-neutral-100">
-                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    Silicon Engineering OS
+                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <BrandLogo size="sm" variant="full" theme="light" />
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-900 border border-cyan-300">OS</span>
                   </div>
                   <p className="text-[11px] text-neutral-600 leading-snug">
                     Curated &amp; Architected by <span className="font-semibold text-neutral-900">Ayush Kumar</span>
@@ -369,8 +342,8 @@ export default function App() {
               </div>
             ) : (
               <div className="pt-2 border-t border-neutral-100 flex justify-center">
-                <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-500" title="Silicon OS by Ayush Kumar">
-                  <Zap className="w-4 h-4 text-amber-500" />
+                <div className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer" title="The GDevelopers Silicon OS">
+                  <GDevelopersIcon className="w-7 h-7" />
                 </div>
               </div>
             )}
@@ -391,15 +364,7 @@ export default function App() {
               <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs">
-                      H
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-neutral-900 block leading-tight">Silicon Tracker</span>
-                      <span className="text-[10px] text-neutral-500 block leading-none">by Ayush Kumar</span>
-                    </div>
-                  </div>
+                  <BrandLogo size="sm" variant="full" theme="light" subtitle="Silicon OS • Ayush Kumar" />
                   <button
                     onClick={() => setIsMobileDrawerOpen(false)}
                     className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 cursor-pointer"
@@ -416,9 +381,11 @@ export default function App() {
 
               {/* Drawer Footer */}
               <div className="pt-4 border-t border-neutral-100">
-                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200 text-center text-xs text-neutral-600">
-                  <div className="font-bold text-neutral-900">Silicon Engineering Hub</div>
-                  <div className="text-[11px] text-neutral-500 mt-0.5">Author &amp; Curator: Ayush Kumar</div>
+                <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-200 text-center text-xs text-neutral-600 space-y-1.5">
+                  <div className="flex justify-center">
+                    <BrandLogo size="xs" variant="full" theme="light" />
+                  </div>
+                  <div className="text-[11px] text-neutral-500 font-medium">Silicon OS Author: Ayush Kumar</div>
                 </div>
               </div>
             </div>

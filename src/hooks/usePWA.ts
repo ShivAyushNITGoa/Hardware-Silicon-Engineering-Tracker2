@@ -40,14 +40,6 @@ export function usePWA() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
-
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => {
@@ -63,7 +55,6 @@ export function usePWA() {
           if (installing) {
             installing.addEventListener('statechange', () => {
               if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-                setIsUpdateAvailable(true);
                 installing.postMessage({ type: 'SKIP_WAITING' });
               }
             });

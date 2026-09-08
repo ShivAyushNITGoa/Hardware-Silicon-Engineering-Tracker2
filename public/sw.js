@@ -1,10 +1,18 @@
-const CACHE_NAME = 'silicon-tracker-v4';
+const CACHE_NAME = 'silicon-tracker-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
-  '/icon.svg'
+  '/favicon.png',
+  '/icon.png',
+  '/icon.svg',
+  '/G%20icon.svg',
+  '/G%20icon.png',
+  '/g-icon.svg',
+  '/g-icon.png',
+  '/logo.svg',
+  '/logo.png'
 ];
 
 // Install: immediately activate new service worker

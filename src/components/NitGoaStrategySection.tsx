@@ -39,7 +39,23 @@ import {
   FULL_NIT_GOA_STRATEGY_REPORT_MD,
   SpecializationTrack
 } from '../data/nitGoaRoadmapData';
-import { getNitGoaProgress, saveNitGoaProgress, getNitGoaElectives, saveNitGoaElectives } from '../utils/storage';
+import { 
+  getNitGoaProgress, 
+  saveNitGoaProgress, 
+  getNitGoaElectives, 
+  saveNitGoaElectives,
+  getStudentCollegeProfile,
+  saveStudentCollegeProfile
+} from '../utils/storage';
+import { 
+  StudentCollegeProfile,
+  UNIVERSAL_COLLEGE_TIERS,
+  BRANCH_PIVOT_STRATEGIES,
+  UNIVERSAL_LAB_STACKS,
+  generateUniversalStrategyReportMd
+} from '../data/universalCollegeData';
+import { UniversalCollegeSelectorModal } from './UniversalCollegeSelectorModal';
+import { UniversalCollegePlaybookView } from './UniversalCollegePlaybookView';
 import { NitGoaElectiveCalculator } from './NitGoaElectiveCalculator';
 import { NitGoaTimelineGantt } from './NitGoaTimelineGantt';
 import { NitGoaCapstoneAdvisor } from './NitGoaCapstoneAdvisor';
@@ -50,7 +66,16 @@ import {
   EXTENDED_NIT_GOA_COMPANIES 
 } from '../data/nitGoaAdvancedData';
 
-export type NitGoaActiveTab = 'electives' | 'timeline' | 'eee_advantage' | 'capstone' | 'whiteboard' | 'decision_matrix' | 'companies' | 'final_roadmap';
+export type NitGoaActiveTab = 
+  | 'universal_playbook'
+  | 'electives' 
+  | 'timeline' 
+  | 'eee_advantage' 
+  | 'capstone' 
+  | 'whiteboard' 
+  | 'decision_matrix' 
+  | 'companies' 
+  | 'final_roadmap';
 
 interface NitGoaStrategySectionProps {
   initialTab?: NitGoaActiveTab;
@@ -72,6 +97,8 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
   onNavigateToReport
 }) => {
   const [activeTab, setActiveTab] = useState<NitGoaActiveTab>(initialTab);
+  const [studentProfile, setStudentProfile] = useState<StudentCollegeProfile>(() => getStudentCollegeProfile());
+  const [isCollegeSelectorOpen, setIsCollegeSelectorOpen] = useState(false);
   const [nitProgress, setNitProgress] = useState<Record<string, boolean>>(() => getNitGoaProgress());
   const [nitElectives, setNitElectives] = useState<Record<string, 'selected' | 'completed' | 'planned'>>(() => getNitGoaElectives());
   const [expandedSemester, setExpandedSemester] = useState<number>(6);
@@ -80,6 +107,19 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
   const [hasCopiedReport, setHasCopiedReport] = useState(false);
   const [showElectiveCalculator, setShowElectiveCalculator] = useState(false);
   const [companyDirectoryCategory, setCompanyDirectoryCategory] = useState<string>('all');
+
+  const handleSaveProfile = (newProfile: StudentCollegeProfile) => {
+    setStudentProfile(newProfile);
+    saveStudentCollegeProfile(newProfile);
+  };
+
+  const isNitGoaActive = studentProfile.collegeTierId === 'nit-goa';
+  const activeBranch = BRANCH_PIVOT_STRATEGIES.find(b => b.branchId === studentProfile.department) || BRANCH_PIVOT_STRATEGIES[0];
+  const activeLab = UNIVERSAL_LAB_STACKS.find(l => l.tierId === studentProfile.labAccessTier) || UNIVERSAL_LAB_STACKS[1];
+
+  const activeReportMd = isNitGoaActive
+    ? FULL_NIT_GOA_STRATEGY_REPORT_MD
+    : generateUniversalStrategyReportMd(studentProfile);
 
   const toggleSkill = (skillId: string) => {
     const next = { ...nitProgress, [skillId]: !nitProgress[skillId] };
@@ -103,7 +143,7 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
     let success = false;
     if (navigator.clipboard && window.isSecureContext) {
       try {
-        await navigator.clipboard.writeText(FULL_NIT_GOA_STRATEGY_REPORT_MD);
+        await navigator.clipboard.writeText(activeReportMd);
         success = true;
       } catch (err) {
         console.warn('Clipboard writeText failed', err);
@@ -112,7 +152,7 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
     if (!success) {
       try {
         const textArea = document.createElement('textarea');
-        textArea.value = FULL_NIT_GOA_STRATEGY_REPORT_MD;
+        textArea.value = activeReportMd;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
         textArea.style.top = '-999999px';
@@ -131,11 +171,13 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
 
   const handleDownloadReport = () => {
     try {
-      const blob = new Blob([FULL_NIT_GOA_STRATEGY_REPORT_MD], { type: 'text/markdown;charset=utf-8;' });
+      const blob = new Blob([activeReportMd], { type: 'text/markdown;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'NIT_Goa_EEE_VLSI_Career_Strategy_Report.md';
+      a.download = isNitGoaActive
+        ? 'NIT_Goa_EEE_VLSI_Career_Strategy_Report.md'
+        : `${studentProfile.collegeName.replace(/[^a-zA-Z0-9]/g, '_')}_Semiconductor_Strategy_Report.md`;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
       document.body.appendChild(a);
@@ -167,26 +209,101 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
 
   return (
     <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-2xs">
+      {/* Universal Institution & College Switcher Bar */}
+      <div className="bg-neutral-950 border-b border-neutral-800 px-4 py-2.5 sm:px-6 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs text-neutral-200">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-neutral-400 font-semibold flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Target Institute:</span>
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 font-bold border border-indigo-400/30 flex items-center gap-1">
+            <span>{studentProfile.collegeName}</span>
+          </span>
+          <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-medium border border-neutral-700">
+            {studentProfile.customDepartmentName || activeBranch.name.split(' (')[0]}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 font-medium border border-emerald-700/60">
+            {studentProfile.semester.toUpperCase()} Sem
+          </span>
+          <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 font-medium border border-amber-700/60 hidden sm:inline-block">
+            {activeLab.title.split(':')[0]}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {/* Quick preset switch pills */}
+          <div className="hidden xl:flex items-center gap-1">
+            {UNIVERSAL_COLLEGE_TIERS.slice(0, 5).map(tier => (
+              <button
+                key={tier.id}
+                onClick={() => {
+                  const updated: StudentCollegeProfile = {
+                    ...studentProfile,
+                    collegeTierId: tier.id,
+                    collegeName: tier.name
+                  };
+                  handleSaveProfile(updated);
+                }}
+                className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer border ${
+                  studentProfile.collegeTierId === tier.id
+                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
+                    : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border-neutral-700'
+                }`}
+              >
+                {tier.id === 'nit-goa' ? 'NIT Goa' : tier.id === 'tier1-iit' ? 'IITs' : tier.id === 'tier1-nit-bits' ? 'NITs/BITS' : tier.id === 'tier1-iiit' ? 'IIITs' : 'Tier-2/3'}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setIsCollegeSelectorOpen(true)}
+            className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <Wrench className="w-3 h-3" />
+            <span>Customize College / Profile</span>
+          </button>
+        </div>
+      </div>
+
       {/* Executive Academic Header */}
       <div className="p-4 sm:p-6 bg-gradient-to-r from-neutral-900 via-neutral-900 to-indigo-950 text-white">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
               <GraduationCap className="w-3.5 h-3.5" />
-              <span>NIT Goa EEE &rarr; VLSI Career Strategy Report</span>
+              <span>
+                {isNitGoaActive 
+                  ? 'NIT Goa EEE → VLSI Career Strategy Report' 
+                  : `${studentProfile.collegeName} • ${activeBranch.name.split(' (')[0]} → VLSI Strategy`}
+              </span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[11px] text-emerald-300 font-normal">Active 6th Sem Plan</span>
+              <span className="text-[11px] text-emerald-300 font-normal">
+                Active {studentProfile.semester.toUpperCase()} Sem Plan
+              </span>
             </div>
 
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2.5 flex-wrap">
-              <span>NIT Goa EEE Transition Strategy &bull; 6th Semester Onwards</span>
+              <span>
+                {isNitGoaActive
+                  ? 'NIT Goa EEE Transition Strategy • 6th Semester Onwards'
+                  : `${studentProfile.collegeName} • ${activeBranch.name.split(' (')[0]} Transition Strategy`}
+              </span>
             </h2>
 
             <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
-              Official academic roadmap based on NIT Goa Academic Handbook &amp; Syllabus Portal.
-              Addresses <span className="text-indigo-300 font-semibold"> EE541 Embedded Systems</span> recovery, 
-              prioritizes <span className="text-amber-300 font-semibold"> EE545 FPGA Digital Design</span>, 
-              and maps directly to semiconductor MNC technical recruitment.
+              {isNitGoaActive ? (
+                <>
+                  Official academic roadmap based on NIT Goa Academic Handbook &amp; Syllabus Portal.
+                  Addresses <span className="text-indigo-300 font-semibold"> EE541 Embedded Systems</span> recovery, 
+                  prioritizes <span className="text-amber-300 font-semibold"> EE545 FPGA Digital Design</span>, 
+                  and maps directly to semiconductor MNC technical recruitment.
+                </>
+              ) : (
+                <>
+                  Universal semiconductor roadmap calibrated for <strong className="text-white">{studentProfile.collegeName}</strong> ({activeBranch.name.split(' (')[0]}, {studentProfile.semester} Sem) with <span className="text-amber-300 font-semibold">{activeLab.title.split(':')[0]}</span> resources.
+                  Optimized for off-campus &amp; on-campus semiconductor technical recruitment.
+                </>
+              )}
             </p>
           </div>
 
@@ -422,6 +539,21 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
       {/* Interactive Navigation Tabs */}
       <div className="flex border-b border-neutral-200 bg-white px-4 sm:px-6 gap-1 sm:gap-2 overflow-x-auto scrollbar-thin">
         <button
+          onClick={() => setActiveTab('universal_playbook')}
+          className={`py-3 px-2.5 sm:px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            activeTab === 'universal_playbook'
+              ? 'border-indigo-600 text-indigo-700 bg-indigo-50/70'
+              : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:border-neutral-300'
+          }`}
+        >
+          <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Universal Playbook (All Colleges)</span>
+          <span className="px-1.5 py-0.2 text-[9px] rounded-full bg-indigo-100 text-indigo-800 font-bold">
+            Universal
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('electives')}
           className={`py-3 px-2.5 sm:px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'electives'
@@ -517,6 +649,19 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
           <span>11. Full Report &amp; Export</span>
         </button>
       </div>
+
+      {/* Tab: Universal College Playbook View */}
+      {activeTab === 'universal_playbook' && (
+        <div className="p-4 sm:p-6">
+          <UniversalCollegePlaybookView 
+            currentProfile={studentProfile}
+            onOpenSelector={() => setIsCollegeSelectorOpen(true)}
+            onNavigateToReport={onNavigateToReport}
+            onNavigateToCurriculum={onNavigateToCurriculum}
+            onNavigateToTools={onNavigateToTools}
+          />
+        </div>
+      )}
 
       {/* Tab 1: Semester Electives Roadmap */}
       {activeTab === 'electives' && (
@@ -1519,6 +1664,14 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
           </div>
         </div>
       )}
+
+      {/* Universal College Selector Modal */}
+      <UniversalCollegeSelectorModal
+        isOpen={isCollegeSelectorOpen}
+        onClose={() => setIsCollegeSelectorOpen(false)}
+        currentProfile={studentProfile}
+        onSaveProfile={handleSaveProfile}
+      />
     </div>
   );
 };

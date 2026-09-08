@@ -20,6 +20,15 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { FULL_NIT_GOA_STRATEGY_REPORT_MD } from '../data/nitGoaRoadmapData';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { getStudentCollegeProfile } from '../utils/storage';
+import { 
+  StudentCollegeProfile, 
+  generateUniversalStrategyReportMd,
+  BRANCH_PIVOT_STRATEGIES,
+  UNIVERSAL_LAB_STACKS
+} from '../data/universalCollegeData';
 
 interface NitGoaReportExportViewProps {
   onBackToStrategy?: () => void;
@@ -30,11 +39,26 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
   onBackToStrategy,
   onNavigateToCompanies
 }) => {
+  const [studentProfile] = useState<StudentCollegeProfile>(() => getStudentCollegeProfile());
+  const [reportSource, setReportSource] = useState<'universal' | 'nit_goa'>(() => {
+    return studentProfile.collegeTierId === 'nit-goa' ? 'nit_goa' : 'universal';
+  });
   const [viewMode, setViewMode] = useState<'formatted' | 'markdown'>('formatted');
   const [hasCopied, setHasCopied] = useState(false);
   const [copyStatusMsg, setCopyStatusMsg] = useState<string | null>(null);
   const [downloadFailed, setDownloadFailed] = useState(false);
   const rawTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const activeBranch = BRANCH_PIVOT_STRATEGIES.find(b => b.branchId === studentProfile.department) || BRANCH_PIVOT_STRATEGIES[0];
+  const activeLab = UNIVERSAL_LAB_STACKS.find(l => l.tierId === studentProfile.labAccessTier) || UNIVERSAL_LAB_STACKS[1];
+
+  const activeReportMd = reportSource === 'nit_goa'
+    ? FULL_NIT_GOA_STRATEGY_REPORT_MD
+    : generateUniversalStrategyReportMd(studentProfile);
+
+  const reportFileName = reportSource === 'nit_goa'
+    ? 'NIT_Goa_EEE_VLSI_Career_Strategy_Report.md'
+    : `${studentProfile.collegeName.replace(/[^a-zA-Z0-9]/g, '_')}_Semiconductor_Strategy_Report.md`;
 
   // Bulletproof copy function supporting iframes and sandbox restrictions
   const handleCopyReport = async () => {
@@ -43,7 +67,7 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
     // Method 1: Try modern Clipboard API
     if (navigator.clipboard && window.isSecureContext) {
       try {
-        await navigator.clipboard.writeText(FULL_NIT_GOA_STRATEGY_REPORT_MD);
+        await navigator.clipboard.writeText(activeReportMd);
         success = true;
       } catch (err) {
         console.warn('Navigator clipboard failed, falling back to textarea execCommand', err);
@@ -54,7 +78,7 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
     if (!success) {
       try {
         const textArea = document.createElement('textarea');
-        textArea.value = FULL_NIT_GOA_STRATEGY_REPORT_MD;
+        textArea.value = activeReportMd;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
         textArea.style.top = '-999999px';
@@ -91,11 +115,11 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
   // Safe file download with error detection for sandboxed iframes
   const handleDownloadReport = () => {
     try {
-      const blob = new Blob([FULL_NIT_GOA_STRATEGY_REPORT_MD], { type: 'text/markdown;charset=utf-8;' });
+      const blob = new Blob([activeReportMd], { type: 'text/markdown;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'NIT_Goa_EEE_VLSI_Career_Strategy_Report.md';
+      a.download = reportFileName;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
       document.body.appendChild(a);
@@ -255,33 +279,82 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
       </div>
 
       {/* Quick Section Navigator Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none text-xs">
-        <span className="text-neutral-400 font-bold px-1 whitespace-nowrap text-[11px] uppercase tracking-wider">
-          Jump to:
-        </span>
-        {[
-          { id: 'sec-1', label: '1. References' },
-          { id: 'sec-2', label: '2. Progress (Sem 1-5)' },
-          { id: 'sec-3', label: '3. EE541 Analysis' },
-          { id: 'sec-4', label: '4. Sem 6-8 Plan' },
-          { id: 'sec-5', label: '5. Skill Timeline' },
-          { id: 'sec-6', label: '6. Skill Stack Goal' },
-          { id: 'sec-7', label: '7. Formulas & Matrix' },
-          { id: 'sec-8', label: '8. MNC Skill Maps' },
-          { id: 'sec-9', label: '9. Final Roadmap' },
-        ].map(pill => (
-          <a
-            key={pill.id}
-            href={`#${pill.id}`}
-            className="px-2.5 py-1 rounded-md bg-white hover:bg-indigo-50 border border-neutral-200 hover:border-indigo-300 text-neutral-700 hover:text-indigo-700 whitespace-nowrap font-medium transition-colors shadow-2xs"
-          >
-            {pill.label}
-          </a>
-        ))}
-      </div>
+      {reportSource === 'nit_goa' ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none text-xs">
+          <span className="text-neutral-400 font-bold px-1 whitespace-nowrap text-[11px] uppercase tracking-wider">
+            Jump to:
+          </span>
+          {[
+            { id: 'sec-1', label: '1. References' },
+            { id: 'sec-2', label: '2. Progress (Sem 1-5)' },
+            { id: 'sec-3', label: '3. EE541 Analysis' },
+            { id: 'sec-4', label: '4. Sem 6-8 Plan' },
+            { id: 'sec-5', label: '5. Skill Timeline' },
+            { id: 'sec-6', label: '6. Skill Stack Goal' },
+            { id: 'sec-7', label: '7. Formulas & Matrix' },
+            { id: 'sec-8', label: '8. MNC Skill Maps' },
+            { id: 'sec-9', label: '9. Final Roadmap' },
+          ].map(pill => (
+            <a
+              key={pill.id}
+              href={`#${pill.id}`}
+              className="px-2.5 py-1 rounded-md bg-white hover:bg-indigo-50 border border-neutral-200 hover:border-indigo-300 text-neutral-700 hover:text-indigo-700 whitespace-nowrap font-medium transition-colors shadow-2xs"
+            >
+              {pill.label}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none text-xs">
+          <span className="text-neutral-400 font-bold px-1 whitespace-nowrap text-[11px] uppercase tracking-wider">
+            Sections:
+          </span>
+          {[
+            '1. Institutional Context',
+            '2. Branch Pivot Defense',
+            '3. Zero-Cost Silicon Lab',
+            '4. Contests & Hackathons',
+            '5. Capstone Matrix',
+            '6. MNC Verification Gates',
+            '7. Semester Milestones'
+          ].map((title, idx) => (
+            <span
+              key={idx}
+              className="px-2.5 py-1 rounded-md bg-white border border-neutral-200 text-neutral-700 whitespace-nowrap font-medium shadow-2xs"
+            >
+              {title}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Main Content Area */}
       {viewMode === 'formatted' ? (
+        reportSource === 'universal' ? (
+          <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-10 shadow-2xs space-y-6 text-neutral-900 font-sans leading-relaxed">
+            <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-indigo-700" />
+                  <span>Customized for {studentProfile.collegeName}</span>
+                </span>
+                <p className="text-indigo-900/80 mt-0.5">
+                  Branch: <strong>{activeBranch.name}</strong> &bull; Semester: <strong>{studentProfile.semester.toUpperCase()}</strong> &bull; Lab Tier: <strong>{activeLab.title.split(':')[0]}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setViewMode('markdown')}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0 cursor-pointer transition-colors shadow-xs"
+              >
+                View Markdown Source
+              </button>
+            </div>
+
+            <div className="prose prose-neutral max-w-none prose-headings:font-bold prose-headings:text-neutral-950 prose-h1:text-2xl prose-h2:text-xl prose-h2:border-b prose-h2:border-neutral-200 prose-h2:pb-2 prose-h3:text-base prose-p:text-neutral-700 prose-li:text-neutral-700 prose-pre:bg-neutral-900 prose-pre:text-neutral-100 prose-code:text-indigo-700">
+              <Markdown remarkPlugins={[remarkGfm]}>{activeReportMd}</Markdown>
+            </div>
+          </div>
+        ) : (
         <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-10 shadow-2xs space-y-10 text-neutral-900 font-sans leading-relaxed">
           
           {/* Section 1 */}
@@ -678,6 +751,7 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
           </section>
 
         </div>
+        )
       ) : (
         /* Raw Markdown View Mode */
         <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-2xs space-y-4">
@@ -712,7 +786,7 @@ export const NitGoaReportExportView: React.FC<NitGoaReportExportViewProps> = ({
             <textarea
               ref={rawTextareaRef}
               readOnly
-              value={FULL_NIT_GOA_STRATEGY_REPORT_MD}
+              value={activeReportMd}
               rows={28}
               className="w-full p-4 font-mono text-xs sm:text-sm bg-neutral-900 text-neutral-100 rounded-xl border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y leading-relaxed"
             />
