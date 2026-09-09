@@ -14,11 +14,30 @@ import {
   Award, 
   Building2, 
   Check, 
+  Circle,
   X,
   Code
 } from 'lucide-react';
 import { InterviewQuestion, InterviewMasteryStatus } from '../types';
 import { getStoredInterviews, saveStoredInterviews, resetStoredInterviews } from '../utils/storage';
+
+interface QuestionFormData {
+  title: string;
+  category: string;
+  companies: string;
+  question: string;
+  answer: string;
+  codeSnippet: string;
+}
+
+const BLANK_FORM: QuestionFormData = {
+  title: '',
+  category: 'STA & Timing',
+  companies: '',
+  question: '',
+  answer: '',
+  codeSnippet: ''
+};
 
 export const InterviewDrillsView: React.FC = () => {
   const [questions, setQuestions] = useState<InterviewQuestion[]>(() => getStoredInterviews());
@@ -38,6 +57,11 @@ export const InterviewDrillsView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
 
+  // Add / Edit Modal State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<QuestionFormData>(BLANK_FORM);
+
   const setStatus = (id: string, st: InterviewMasteryStatus) => {
     const updated = { ...statusMap, [id]: st };
     setStatusMap(updated);
@@ -50,6 +74,82 @@ export const InterviewDrillsView: React.FC = () => {
 
   const toggleReveal = (id: string) => {
     setRevealedAnswers((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormData(BLANK_FORM);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (q: InterviewQuestion, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(q.id);
+    setFormData({
+      title: q.title || '',
+      category: q.category || 'STA & Timing',
+      companies: q.companies ? q.companies.join(', ') : '',
+      question: q.question || '',
+      answer: q.answer || '',
+      codeSnippet: (typeof q.codeSnippet === 'string' ? q.codeSnippet : (q.codeSnippet as any)?.code) || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (id: string, title: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete question "${title}"?`)) {
+      const updated = questions.filter(q => q.id !== id);
+      setQuestions(updated);
+      saveStoredInterviews(updated);
+    }
+  };
+
+  const handleSaveQuestion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !formData.question.trim()) {
+      alert('Please fill in at least the Title and Question.');
+      return;
+    }
+
+    const compList = formData.companies
+      .split(',')
+      .map(c => c.trim())
+      .filter(Boolean);
+
+    let updatedList: InterviewQuestion[];
+
+    if (editingId) {
+      updatedList = questions.map(q => {
+        if (q.id === editingId) {
+          return {
+            ...q,
+            title: formData.title.trim(),
+            category: formData.category.trim() as any,
+            companies: compList,
+            question: formData.question.trim(),
+            answer: formData.answer.trim(),
+            codeSnippet: formData.codeSnippet.trim() || undefined
+          };
+        }
+        return q;
+      });
+    } else {
+      const newQuestion: InterviewQuestion = {
+        id: `custom-interview-${Date.now()}`,
+        title: formData.title.trim(),
+        category: formData.category.trim() as any,
+        companies: compList.length > 0 ? compList : ['Semiconductor Industry'],
+        question: formData.question.trim(),
+        answer: formData.answer.trim(),
+        codeSnippet: formData.codeSnippet.trim() || undefined
+      };
+      updatedList = [newQuestion, ...questions];
+    }
+
+    setQuestions(updatedList);
+    saveStoredInterviews(updatedList);
+    setIsModalOpen(false);
   };
 
   const handleRandomDrill = () => {
@@ -159,10 +259,18 @@ export const InterviewDrillsView: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <button
+              onClick={handleOpenAdd}
+              className="px-2.5 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Question</span>
+            </button>
+
             <button
               onClick={handleRandomDrill}
-              className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-2.5 sm:px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
             >
               <Shuffle className="w-3.5 h-3.5" />
               <span>Random Drill</span>
@@ -170,7 +278,7 @@ export const InterviewDrillsView: React.FC = () => {
 
             <button
               onClick={handleReset}
-              className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-2.5 sm:px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset</span>
@@ -243,25 +351,44 @@ export const InterviewDrillsView: React.FC = () => {
                   </h3>
                 </div>
 
-                {/* Status Switcher */}
-                <div className="flex items-center gap-1 shrink-0">
-                  {(['Untested', 'Review', 'Mastered'] as const).map((mode) => (
+                {/* Status Switcher & Card Actions */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1">
+                    {(['Untested', 'Review', 'Mastered'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setStatus(q.id, mode)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                          st === mode
+                            ? mode === 'Mastered'
+                              ? 'bg-emerald-600 text-white'
+                              : mode === 'Review'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-neutral-900 text-white'
+                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-0.5 border-l border-neutral-200 pl-1.5 ml-1">
                     <button
-                      key={mode}
-                      onClick={() => setStatus(q.id, mode)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                        st === mode
-                          ? mode === 'Mastered'
-                            ? 'bg-emerald-600 text-white'
-                            : mode === 'Review'
-                            ? 'bg-amber-600 text-white'
-                            : 'bg-neutral-900 text-white'
-                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                      }`}
+                      onClick={(e) => handleOpenEdit(q, e)}
+                      title="Edit Question"
+                      className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
                     >
-                      {mode}
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
-                  ))}
+                    <button
+                      onClick={(e) => handleDelete(q.id, q.title, e)}
+                      title="Delete Question"
+                      className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -318,6 +445,142 @@ export const InterviewDrillsView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Add / Edit Question Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-neutral-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-neutral-200 flex items-center justify-between bg-neutral-50/50">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                  {editingId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900">
+                    {editingId ? 'Edit Technical Interview Drill' : 'Add Custom Interview Drill'}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Update question prompt, company tags, and detailed derivation.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveQuestion} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Question Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Asynchronous FIFO Pointer Gray Coding & Depth Calculation"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Category <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. STA & Timing, SystemVerilog RTL, UVM"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Target Companies (Comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nvidia, Qualcomm, TI, AMD"
+                    value={formData.companies}
+                    onChange={(e) => setFormData({ ...formData, companies: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Question Prompt / Problem Statement <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="State the interview question, equations, or scenario..."
+                  value={formData.question}
+                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-y"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Detailed Solution &amp; Mathematical Derivation <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Detailed derivation, step-by-step whiteboard proof, setup/hold slack formulas..."
+                  value={formData.answer}
+                  onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-y font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800 flex items-center gap-1.5">
+                  <Code className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Verilog / Code Snippet (Optional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="// module async_fifo ... (optional Verilog or SystemVerilog code snippet)"
+                  value={formData.codeSnippet}
+                  onChange={(e) => setFormData({ ...formData, codeSnippet: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-900 text-neutral-100 border border-neutral-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-cyan-400 resize-y font-mono"
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{editingId ? 'Save Changes' : 'Create Drill'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

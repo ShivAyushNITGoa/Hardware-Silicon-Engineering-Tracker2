@@ -335,14 +335,14 @@ export type InterviewQuestionCategory =
 export interface InterviewQuestion {
   id: string;
   title: string;
-  category: InterviewQuestionCategory;
-  difficulty: 'Core' | 'Advanced' | 'Crucial';
+  category: InterviewQuestionCategory | string;
+  difficulty?: 'Core' | 'Advanced' | 'Crucial' | string;
   companies: string[];
   question: string;
   answer: string;
   codeSnippet?: string;
   formulaOrDiagram?: string;
-  keyTakeaway: string;
+  keyTakeaway?: string;
 }
 
 export interface ColdOutreachTemplate {
@@ -371,7 +371,8 @@ export type InstitutionalDomain =
   | 'EDA Tools & Open-Source Silicon'
   | 'Hardware Security & Cryptography'
   | 'Neuromorphic & Edge AI'
-  | 'Silicon Photonics & MEMS';
+  | 'Silicon Photonics & MEMS'
+  | string;
 
 export interface NotableProfessorOrLab {
   name: string;
@@ -384,30 +385,31 @@ export interface NotableProfessorOrLab {
 
 export interface InstitutionInternship {
   id: string;
-  instituteName: string;
+  instituteName?: string;
   name?: string;
   shortName: string;
   type: InstitutionType;
   programName: string;
-  location: string;
+  location?: string;
   domains: InstitutionalDomain[];
   stipend: string;
   stipendAmountNumeric?: number;
   duration: string;
-  applicationWindow: string;
-  deadlineDescription: string;
+  applicationWindow?: string;
+  deadlineDescription?: string;
   deadline?: string;
   eligibility: string;
   minCgpaOrRank?: string;
-  officialPortalUrl: string;
+  officialPortalUrl?: string;
   applicationUrl?: string;
   websiteUrl?: string;
-  overview: string;
-  keyHighlights: string[];
-  selectionProcess: string;
-  deliverablesAndOutcomes: string[];
-  notableFacultyAndLabs: NotableProfessorOrLab[];
-  applicationStrategyTips: string[];
+  overview?: string;
+  keyHighlights?: string[];
+  selectionProcess?: string;
+  deliverablesAndOutcomes?: string[];
+  notableFacultyAndLabs?: NotableProfessorOrLab[];
+  applicationStrategyTips?: string[];
+  keyProfessors?: string[];
   status?: ApplicationStatus;
   userNotes?: string;
   appliedDate?: string;
@@ -418,7 +420,7 @@ export interface WeeklyMilestoneItem {
   month: number;
   title: string;
   phase: string;
-  targetHours: number;
+  targetHours?: number;
   coreGoals: string[];
   deliverable: string;
   exitGate: string;

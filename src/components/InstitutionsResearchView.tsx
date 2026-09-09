@@ -13,7 +13,12 @@ import {
   Sparkles,
   Mail,
   FileText,
-  UserCheck
+  UserCheck,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Check
 } from 'lucide-react';
 import { ResearchInstitution, ApplicationStatus } from '../types';
 import { 
@@ -24,6 +29,32 @@ import {
   saveInstitutionsOverrides
 } from '../utils/storage';
 
+interface InstitutionFormData {
+  name: string;
+  shortName: string;
+  type: string;
+  programName: string;
+  stipend: string;
+  duration: string;
+  deadline: string;
+  domainsText: string;
+  eligibility: string;
+  applicationUrl: string;
+}
+
+const BLANK_INSTITUTION_FORM: InstitutionFormData = {
+  name: '',
+  shortName: '',
+  type: 'IIT',
+  programName: '',
+  stipend: '₹10,000 / month',
+  duration: '8 Weeks',
+  deadline: 'Feb - March',
+  domainsText: 'VLSI Design, Digital RTL, Computer Architecture',
+  eligibility: 'Pre-final year B.Tech ECE/EEE with 7.5+ CGPA',
+  applicationUrl: ''
+};
+
 export const InstitutionsResearchView: React.FC = () => {
   const [institutions, setInstitutions] = useState<ResearchInstitution[]>(() => getStoredInstitutions());
   const [overrides, setOverrides] = useState<Record<string, any>>(() => getInstitutionsOverrides());
@@ -32,6 +63,11 @@ export const InstitutionsResearchView: React.FC = () => {
   const [stipendFilter, setStipendFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'fellowships' | 'faculty' | 'sop_guide'>('fellowships');
+
+  // Add / Edit Modal State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<InstitutionFormData>(BLANK_INSTITUTION_FORM);
 
   const toggleBookmark = (id: string) => {
     const current = !!overrides[id]?.bookmarked;
@@ -56,6 +92,97 @@ export const InstitutionsResearchView: React.FC = () => {
     };
     setOverrides(updated);
     saveInstitutionsOverrides(updated);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormData(BLANK_INSTITUTION_FORM);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (inst: ResearchInstitution, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(inst.id);
+    setFormData({
+      name: inst.name,
+      shortName: inst.shortName,
+      type: inst.type,
+      programName: inst.programName,
+      stipend: inst.stipend || '',
+      duration: inst.duration || '',
+      deadline: inst.deadline || '',
+      domainsText: (inst.domains || []).join(', '),
+      eligibility: inst.eligibility || '',
+      applicationUrl: inst.applicationUrl || inst.websiteUrl || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteInstitution = (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete research program "${name}"?`)) {
+      const updated = institutions.filter(i => i.id !== id);
+      setInstitutions(updated);
+      saveStoredInstitutions(updated);
+    }
+  };
+
+  const handleSaveInstitution = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.programName.trim()) {
+      alert('Please fill in Institution Name and Program Name.');
+      return;
+    }
+
+    const domainList = formData.domainsText
+      .split(',')
+      .map(d => d.trim())
+      .filter(Boolean);
+
+    let updatedList: ResearchInstitution[];
+
+    if (editingId) {
+      updatedList = institutions.map(i => {
+        if (i.id === editingId) {
+          return {
+            ...i,
+            name: formData.name.trim(),
+            shortName: formData.shortName.trim() || formData.name.slice(0, 8),
+            type: formData.type.trim() as any,
+            programName: formData.programName.trim(),
+            stipend: formData.stipend.trim(),
+            duration: formData.duration.trim(),
+            deadline: formData.deadline.trim(),
+            domains: domainList.length > 0 ? domainList : i.domains,
+            eligibility: formData.eligibility.trim(),
+            applicationUrl: formData.applicationUrl.trim(),
+            websiteUrl: formData.applicationUrl.trim()
+          };
+        }
+        return i;
+      });
+    } else {
+      const newInst: ResearchInstitution = {
+        id: `custom-inst-${Date.now()}`,
+        name: formData.name.trim(),
+        shortName: formData.shortName.trim() || formData.name.slice(0, 8),
+        type: formData.type.trim() as any,
+        programName: formData.programName.trim(),
+        stipend: formData.stipend.trim(),
+        duration: formData.duration.trim(),
+        deadline: formData.deadline.trim(),
+        domains: domainList.length > 0 ? domainList : ['VLSI Design', 'Microarchitecture'],
+        eligibility: formData.eligibility.trim(),
+        applicationUrl: formData.applicationUrl.trim(),
+        websiteUrl: formData.applicationUrl.trim(),
+        keyProfessors: []
+      };
+      updatedList = [newInst, ...institutions];
+    }
+
+    setInstitutions(updatedList);
+    saveStoredInstitutions(updatedList);
+    setIsModalOpen(false);
   };
 
   const handleReset = () => {
@@ -177,6 +304,14 @@ export const InstitutionsResearchView: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <button
+                  onClick={handleOpenAdd}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Program</span>
+                </button>
+
+                <button
                   onClick={handleReset}
                   className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                 >
@@ -239,14 +374,31 @@ export const InstitutionsResearchView: React.FC = () => {
                         </h3>
                       </div>
 
-                      <button
-                        onClick={() => toggleBookmark(inst.id)}
-                        className={`p-1.5 rounded-lg border cursor-pointer ${
-                          isFav ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-white border-neutral-200 text-neutral-400 hover:text-neutral-700'
-                        }`}
-                      >
-                        <Bookmark className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-400' : ''}`} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => toggleBookmark(inst.id)}
+                          className={`p-1.5 rounded-lg border cursor-pointer ${
+                            isFav ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-white border-neutral-200 text-neutral-400 hover:text-neutral-700'
+                          }`}
+                          title={isFav ? 'Remove Star' : 'Star Program'}
+                        >
+                          <Bookmark className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-400' : ''}`} />
+                        </button>
+                        <button
+                          onClick={(e) => handleOpenEdit(inst, e)}
+                          className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                          title="Edit Program"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteInstitution(inst.id, inst.name, e)}
+                          className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Program"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-neutral-600 font-medium">
@@ -377,6 +529,200 @@ export const InstitutionsResearchView: React.FC = () => {
                 </li>
               </ul>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Institution Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-neutral-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-neutral-200 flex items-center justify-between bg-neutral-50/50">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                  {editingId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900">
+                    {editingId ? 'Edit Research Fellowship' : 'Add Research Fellowship'}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Manage university research fellowships, summer research internships, and portals.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveInstitution} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="font-bold text-neutral-800">
+                    Institute Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Indian Institute of Technology Bombay"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Short Tag / Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IITB"
+                    value={formData.shortName}
+                    onChange={(e) => setFormData({ ...formData, shortName: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Category Type
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 cursor-pointer"
+                  >
+                    <option value="IIT">IIT</option>
+                    <option value="IISc">IISc</option>
+                    <option value="NIT">NIT</option>
+                    <option value="IIIT">IIIT</option>
+                    <option value="Autonomous Lab / Govt">Autonomous Lab / Govt</option>
+                    <option value="International Lab">International Lab</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Program / Fellowship Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Summer Research Internship Programme (SRIP)"
+                    value={formData.programName}
+                    onChange={(e) => setFormData({ ...formData, programName: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Stipend
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ₹10,000 / month"
+                    value={formData.stipend}
+                    onChange={(e) => setFormData({ ...formData, stipend: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 8 Weeks"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Application Window
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Feb 15 - March 20"
+                    value={formData.deadline}
+                    onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Focus Domains (Comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="VLSI Design, Digital RTL, RISC-V, Formal Verification, OpenLane"
+                  value={formData.domainsText}
+                  onChange={(e) => setFormData({ ...formData, domainsText: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Eligibility Criteria
+                </label>
+                <input
+                  type="text"
+                  placeholder="Pre-final year B.Tech ECE/EEE/CSE with minimum 8.0 CGPA"
+                  value={formData.eligibility}
+                  onChange={(e) => setFormData({ ...formData, eligibility: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Official Application / Portal URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={formData.applicationUrl}
+                  onChange={(e) => setFormData({ ...formData, applicationUrl: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 font-mono"
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{editingId ? 'Save Changes' : 'Add Fellowship'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

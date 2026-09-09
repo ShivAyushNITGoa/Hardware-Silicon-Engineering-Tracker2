@@ -18,14 +18,23 @@ import {
   Sparkles,
   BookMarked,
   Filter,
-  X
+  X,
+  Plus,
+  Edit2,
+  Trash2,
+  Save
 } from 'lucide-react';
 import { flatEncyclopediaDocs } from '../data/encyclopediaData';
 import { 
   getStudiedEncyclopediaDocs, 
   saveStudiedEncyclopediaDocs, 
   getBookmarkedEncyclopediaDocs, 
-  saveBookmarkedEncyclopediaDocs 
+  saveBookmarkedEncyclopediaDocs,
+  getStoredCustomEncyclopediaDocs,
+  saveStoredCustomEncyclopediaDocs,
+  getStoredEncyclopediaDocNotes,
+  saveStoredEncyclopediaDocNotes,
+  CustomEncyclopediaDoc
 } from '../utils/storage';
 
 interface FlattenedDoc {
@@ -34,12 +43,41 @@ interface FlattenedDoc {
   path: string;
   volumeId: string;
   volumeName: string;
+  isCustom?: boolean;
+  markdownContent?: string;
+  category?: string;
 }
 
 export const EncyclopediaView: React.FC = () => {
-  // Flatten all documents from tree
+  // Custom User Documents
+  const [customDocs, setCustomDocs] = useState<CustomEncyclopediaDoc[]>(() => getStoredCustomEncyclopediaDocs());
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [editingDocPath, setEditingDocPath] = useState<string | null>(null);
+  const [docFormData, setDocFormData] = useState({
+    title: '',
+    volumeId: 'Volume_01_Fundamentals',
+    category: 'Engineering Reference',
+    markdownContent: ''
+  });
+
+  // Flatten all documents from tree + custom docs
   const allDocs = useMemo<FlattenedDoc[]>(() => {
     const list: FlattenedDoc[] = [];
+
+    // Custom docs at top
+    customDocs.forEach((cd) => {
+      const vol = flatEncyclopediaDocs.find(v => v.id === cd.volumeId);
+      list.push({
+        title: cd.title,
+        fileName: `${cd.title.toLowerCase().replace(/\s+/g, '_')}.md`,
+        path: `custom-${cd.id}`,
+        volumeId: cd.volumeId,
+        volumeName: vol?.name || cd.volumeId,
+        isCustom: true,
+        markdownContent: cd.markdownContent,
+        category: cd.category
+      });
+    });
 
     function traverse(item: any, volId: string, volName: string) {
       if (item.isFile || item.type === 'file') {
@@ -66,7 +104,7 @@ export const EncyclopediaView: React.FC = () => {
     });
 
     return list;
-  }, []);
+  }, [customDocs]);
 
   const volumes = useMemo(() => {
     return flatEncyclopediaDocs.map((v) => ({
@@ -94,6 +132,127 @@ export const EncyclopediaView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
+  // Personal Engineering Notes State
+  const [docNotes, setDocNotes] = useState<Record<string, string>>(() => getStoredEncyclopediaDocNotes());
+  const [currentNoteText, setCurrentNoteText] = useState<string>('');
+  const [noteSaveStatus, setNoteSaveStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedDoc) {
+      setCurrentNoteText(docNotes[selectedDoc.path] || '');
+      setNoteSaveStatus(null);
+    }
+  }, [selectedDoc, docNotes]);
+
+  const handleSaveNote = () => {
+    if (!selectedDoc) return;
+    const updated = { ...docNotes, [selectedDoc.path]: currentNoteText };
+    setDocNotes(updated);
+    saveStoredEncyclopediaDocNotes(updated);
+    setNoteSaveStatus('Saved!');
+    setTimeout(() => setNoteSaveStatus(null), 2000);
+  };
+
+  const handleOpenAddDoc = () => {
+    setEditingDocPath(null);
+    setDocFormData({
+      title: '',
+      volumeId: selectedVolumeId || 'Volume_01_Fundamentals',
+      category: 'Engineering Reference',
+      markdownContent: '# Technical Architecture & Verification Notes\n\n### Theoretical Overview\nDetailed analysis of engineering principles...\n\n### Practical Implementation\n- Lab hardware setup & verification checks\n- Timing closure and power constraints'
+    });
+    setIsDocModalOpen(true);
+  };
+
+  const handleOpenEditDoc = (doc: FlattenedDoc) => {
+    setEditingDocPath(doc.path);
+    setDocFormData({
+      title: doc.title,
+      volumeId: doc.volumeId,
+      category: doc.category || 'Engineering Reference',
+      markdownContent: doc.markdownContent || docContent
+    });
+    setIsDocModalOpen(true);
+  };
+
+  const handleDeleteDoc = (path: string, title: string) => {
+    if (window.confirm(`Delete custom reference article "${title}"?`)) {
+      const cleanId = path.replace(/^custom-/, '');
+      const updated = customDocs.filter(d => d.id !== cleanId && `custom-${d.id}` !== path);
+      setCustomDocs(updated);
+      saveStoredCustomEncyclopediaDocs(updated);
+      if (selectedDoc.path === path) {
+        setSelectedDoc(allDocs.find(d => d.path !== path) || allDocs[0]);
+      }
+    }
+  };
+
+  const handleSaveCustomDoc = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docFormData.title.trim() || !docFormData.markdownContent.trim()) {
+      alert('Please provide a title and markdown content.');
+      return;
+    }
+
+    let updatedList: CustomEncyclopediaDoc[];
+    let targetDoc: FlattenedDoc;
+
+    if (editingDocPath) {
+      const cleanId = editingDocPath.replace(/^custom-/, '');
+      updatedList = customDocs.map(d => {
+        if (d.id === cleanId) {
+          return {
+            ...d,
+            title: docFormData.title.trim(),
+            volumeId: docFormData.volumeId,
+            category: docFormData.category.trim(),
+            markdownContent: docFormData.markdownContent
+          };
+        }
+        return d;
+      });
+      targetDoc = {
+        title: docFormData.title.trim(),
+        fileName: `${docFormData.title.toLowerCase().replace(/\s+/g, '_')}.md`,
+        path: editingDocPath,
+        volumeId: docFormData.volumeId,
+        volumeName: volumes.find(v => v.id === docFormData.volumeId)?.name || docFormData.volumeId,
+        isCustom: true,
+        category: docFormData.category.trim(),
+        markdownContent: docFormData.markdownContent
+      };
+    } else {
+      const newId = `doc-${Date.now()}`;
+      const newCustomDoc: CustomEncyclopediaDoc = {
+        id: newId,
+        volumeId: docFormData.volumeId,
+        title: docFormData.title.trim(),
+        category: docFormData.category.trim(),
+        tags: ['Custom Notes', 'User Added'],
+        estimatedReadingTime: '5 min',
+        summary: docFormData.title.trim(),
+        markdownContent: docFormData.markdownContent,
+        dateAdded: new Date().toISOString()
+      };
+      updatedList = [newCustomDoc, ...customDocs];
+      targetDoc = {
+        title: newCustomDoc.title,
+        fileName: `${newCustomDoc.title.toLowerCase().replace(/\s+/g, '_')}.md`,
+        path: `custom-${newId}`,
+        volumeId: newCustomDoc.volumeId,
+        volumeName: volumes.find(v => v.id === newCustomDoc.volumeId)?.name || newCustomDoc.volumeId,
+        isCustom: true,
+        category: newCustomDoc.category,
+        markdownContent: newCustomDoc.markdownContent
+      };
+    }
+
+    setCustomDocs(updatedList);
+    saveStoredCustomEncyclopediaDocs(updatedList);
+    setSelectedDoc(targetDoc);
+    setIsDocModalOpen(false);
+  };
+
   // Toggle studied status
   const toggleStudied = (docPath: string) => {
     const updated = { ...studiedDocs, [docPath]: !studiedDocs[docPath] };
@@ -111,6 +270,14 @@ export const EncyclopediaView: React.FC = () => {
   // Fetch document content
   useEffect(() => {
     if (!selectedDoc) return;
+    
+    // Custom document content
+    if (selectedDoc.isCustom) {
+      setDocContent(selectedDoc.markdownContent || '');
+      setIsLoading(false);
+      return;
+    }
+
     let isCancelled = false;
     setIsLoading(true);
 
@@ -269,6 +436,14 @@ export const EncyclopediaView: React.FC = () => {
 
           {/* Search & Filter Controls */}
           <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-xs space-y-3">
+            <button
+              onClick={handleOpenAddDoc}
+              className="w-full py-2 px-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Custom Article / Note</span>
+            </button>
+
             <div className="relative">
               <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
               <input
@@ -399,6 +574,25 @@ export const EncyclopediaView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {selectedDoc.isCustom && (
+                <>
+                  <button
+                    onClick={() => handleOpenEditDoc(selectedDoc)}
+                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900 cursor-pointer"
+                    title="Edit Custom Document"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDoc(selectedDoc.path, selectedDoc.title)}
+                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 cursor-pointer"
+                    title="Delete Custom Document"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+
               <button
                 onClick={() => toggleBookmark(selectedDoc.path)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
@@ -463,8 +657,131 @@ export const EncyclopediaView: React.FC = () => {
               </button>
             )}
           </div>
+
+          {/* Personal Engineering Notes & Takeaways */}
+          <div className="border-t border-neutral-100 pt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-4 h-4 text-indigo-600" />
+                <h4 className="text-xs sm:text-sm font-bold text-neutral-900">
+                  Personal Engineering Notes &amp; Takeaways
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                {noteSaveStatus && (
+                  <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{noteSaveStatus}</span>
+                  </span>
+                )}
+                <button
+                  onClick={handleSaveNote}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Note</span>
+                </button>
+              </div>
+            </div>
+            <textarea
+              rows={3}
+              placeholder="Record your takeaways, design formulas, simulation observations, or interview flashcard notes for this module..."
+              value={currentNoteText}
+              onChange={(e) => setCurrentNoteText(e.target.value)}
+              className="w-full text-xs font-mono p-3 bg-neutral-50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
         </div>
       </div>
+
+      {/* Add / Edit Custom Technical Article Modal */}
+      {isDocModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs">
+          <div className="bg-white border border-neutral-200 rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-cyan-600" />
+                <span>{editingDocPath ? 'Edit Technical Article' : 'Add Custom Technical Article'}</span>
+              </h3>
+              <button 
+                onClick={() => setIsDocModalOpen(false)}
+                className="p-1 text-neutral-400 hover:text-neutral-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomDoc} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Article / Module Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Metastability Resolution & MTBF Calculations in Asynchronous FIFOs"
+                  value={docFormData.title}
+                  onChange={e => setDocFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Encyclopedia Volume</label>
+                  <select
+                    value={docFormData.volumeId}
+                    onChange={e => setDocFormData(prev => ({ ...prev, volumeId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  >
+                    {volumes.map(vol => (
+                      <option key={vol.id} value={vol.id}>{vol.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Category Tag</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. CDC Verification, Timing Closure, Custom Verilog"
+                    value={docFormData.category}
+                    onChange={e => setDocFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Markdown Technical Content *</label>
+                <textarea
+                  rows={12}
+                  required
+                  placeholder="# Technical Spec&#10;&#10;### Overview&#10;Explain principles, equations, timing diagrams, code samples..."
+                  value={docFormData.markdownContent}
+                  onChange={e => setDocFormData(prev => ({ ...prev, markdownContent: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsDocModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{editingDocPath ? 'Update Article' : 'Save Article'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

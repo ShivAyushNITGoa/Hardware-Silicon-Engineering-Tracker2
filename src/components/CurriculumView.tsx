@@ -767,16 +767,17 @@ export const CurriculumView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <button
               onClick={() => handleMarkTrack(true)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer"
+              className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer shrink-0"
             >
-              Mark Track Complete
+              <span className="hidden sm:inline">Mark Track Complete</span>
+              <span className="sm:hidden">Mark Complete</span>
             </button>
             <button
               onClick={() => handleMarkTrack(false)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer"
+              className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer shrink-0"
             >
               Reset Track
             </button>

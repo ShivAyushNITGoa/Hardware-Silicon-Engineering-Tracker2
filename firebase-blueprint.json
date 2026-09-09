@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "User profiles and aggregate study stats",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string" },
+        "lastActive": { "type": "string" },
+        "stats": { "type": "object" }
+      },
+      "required": ["uid", "email"]
+    },
+    "user_progress": {
+      "title": "User Progress",
+      "description": "Per-user hardware tracker progress, bookmarks, and notes",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "eceEeeProgress": { "type": "object" },
+        "eceEeeBookmarks": { "type": "object" },
+        "eceEeeNotes": { "type": "object" },
+        "curriculumSubs": { "type": "object" },
+        "studiedDocs": { "type": "object" },
+        "toolSkills": { "type": "object" },
+        "activeField": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    }
+  }
+}

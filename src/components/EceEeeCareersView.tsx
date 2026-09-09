@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   Layers,
   Cpu,
@@ -27,7 +28,13 @@ import {
   MapPin,
   BookOpen,
   Wallet,
-  FileText
+  FileText,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import {
   ECE_EEE_CAREER_FIELDS,
@@ -35,23 +42,68 @@ import {
   INDIAN_TECH_HUBS,
   EceEeeCareerField
 } from '../data/eceEeeCareersData';
+import {
+  getStoredEceEeeCareers,
+  saveStoredEceEeeCareers,
+  resetStoredEceEeeCareers
+} from '../utils/storage';
+
+interface CareerFieldFormData {
+  title: string;
+  departmentFocus: 'ECE' | 'EEE' | 'Both';
+  marketDemand: string;
+  marketDemandTier: 'Massive' | 'Very High' | 'High' | 'Stable';
+  tagline: string;
+  engineeringFocusFull: string;
+  skillPrerequisites: string;
+  keyTechnologies: string;
+  majorEmployers: string;
+  overview: string;
+  entrySalaryRange: string;
+  entryMedianLpa: string;
+}
+
+const BLANK_CAREER_FIELD_FORM: CareerFieldFormData = {
+  title: '',
+  departmentFocus: 'ECE',
+  marketDemand: 'High Demand (Expanding)',
+  marketDemandTier: 'High',
+  tagline: '',
+  engineeringFocusFull: '',
+  skillPrerequisites: 'Signals & Systems, Digital Logic, Python, C++',
+  keyTechnologies: 'FPGA, Verilog, DSP, Linux',
+  majorEmployers: 'Qualcomm, Texas Instruments, Intel, Bosch',
+  overview: '',
+  entrySalaryRange: '₹8.0 - 15.0 LPA',
+  entryMedianLpa: '₹10.5 LPA'
+};
 
 interface EceEeeCareersViewProps {
   onNavigateToCareerPrep?: () => void;
   onNavigateToTools?: () => void;
   onNavigateToCurriculum?: () => void;
   onNavigateToPrep?: (fieldId?: string) => void;
+  onGoBack?: () => void;
 }
 
 export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
   onNavigateToCareerPrep,
   onNavigateToTools,
   onNavigateToCurriculum,
-  onNavigateToPrep
+  onNavigateToPrep,
+  onGoBack
 }) => {
   // Main view modes
   const [activeMainTab, setActiveMainTab] = useState<'fields' | 'salary_explorer' | 'hardware_lab' | 'tech_hubs' | 'standards_library'>('fields');
   
+  // Custom ECE/EEE Careers State
+  const [careerFields, setCareerFields] = useState<EceEeeCareerField[]>(() => getStoredEceEeeCareers());
+  
+  // Add/Edit Career Field Modal State
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [fieldFormData, setFieldFormData] = useState<CareerFieldFormData>(BLANK_CAREER_FIELD_FORM);
+
   // Filters & search
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<'All' | 'ECE' | 'EEE' | 'Both'>('All');
@@ -92,12 +144,238 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
 
   const expandAll = () => {
     const all: Record<string, boolean> = {};
-    ECE_EEE_CAREER_FIELDS.forEach(f => { all[f.id] = true; });
+    careerFields.forEach(f => { all[f.id] = true; });
     setExpandedFieldIds(all);
   };
 
   const collapseAll = () => {
     setExpandedFieldIds({});
+  };
+
+  const handleOpenAddField = () => {
+    setEditingFieldId(null);
+    setFieldFormData(BLANK_CAREER_FIELD_FORM);
+    setIsFieldModalOpen(true);
+  };
+
+  const handleOpenEditField = (field: EceEeeCareerField) => {
+    setEditingFieldId(field.id);
+    setFieldFormData({
+      title: field.title,
+      departmentFocus: field.departmentFocus,
+      marketDemand: field.marketDemand,
+      marketDemandTier: field.marketDemandTier,
+      tagline: field.tagline,
+      engineeringFocusFull: field.engineeringFocusFull,
+      skillPrerequisites: field.skillPrerequisites.join(', '),
+      keyTechnologies: field.keyTechnologies.join(', '),
+      majorEmployers: field.majorEmployers.join(', '),
+      overview: field.overview,
+      entrySalaryRange: field.salaryBenchmarks[0]?.indiaLpaRange || '₹8.0 - 15.0 LPA',
+      entryMedianLpa: field.salaryBenchmarks[0]?.indiaMedianLpa || '₹10.5 LPA'
+    });
+    setIsFieldModalOpen(true);
+  };
+
+  const handleDeleteField = (id: string, title: string) => {
+    if (careerFields.length <= 1) {
+      alert('You must retain at least one career field.');
+      return;
+    }
+    if (window.confirm(`Delete career field "${title}"?`)) {
+      const updated = careerFields.filter(f => f.id !== id);
+      setCareerFields(updated);
+      saveStoredEceEeeCareers(updated);
+    }
+  };
+
+  const handleResetFields = () => {
+    if (window.confirm('Reset all ECE/EEE career fields to original curriculum specifications?')) {
+      const def = resetStoredEceEeeCareers();
+      setCareerFields(def);
+    }
+  };
+
+  const handleSaveField = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fieldFormData.title.trim() || !fieldFormData.tagline.trim()) {
+      alert('Please provide a field title and tagline.');
+      return;
+    }
+
+    const skills = fieldFormData.skillPrerequisites.split(',').map(s => s.trim()).filter(Boolean);
+    const techs = fieldFormData.keyTechnologies.split(',').map(s => s.trim()).filter(Boolean);
+    const employers = fieldFormData.majorEmployers.split(',').map(s => s.trim()).filter(Boolean);
+
+    let updatedList: EceEeeCareerField[];
+    if (editingFieldId) {
+      updatedList = careerFields.map(field => {
+        if (field.id === editingFieldId) {
+          const updatedBenchmarks = [...field.salaryBenchmarks];
+          if (updatedBenchmarks.length > 0) {
+            updatedBenchmarks[0] = {
+              ...updatedBenchmarks[0],
+              indiaLpaRange: fieldFormData.entrySalaryRange.trim(),
+              indiaMedianLpa: fieldFormData.entryMedianLpa.trim()
+            };
+          }
+          return {
+            ...field,
+            title: fieldFormData.title.trim(),
+            departmentFocus: fieldFormData.departmentFocus,
+            marketDemand: fieldFormData.marketDemand.trim(),
+            marketDemandTier: fieldFormData.marketDemandTier,
+            tagline: fieldFormData.tagline.trim(),
+            engineeringFocusFull: fieldFormData.engineeringFocusFull.trim() || fieldFormData.tagline.trim(),
+            skillPrerequisites: skills.length ? skills : field.skillPrerequisites,
+            keyTechnologies: techs.length ? techs : field.keyTechnologies,
+            majorEmployers: employers.length ? employers : field.majorEmployers,
+            overview: fieldFormData.overview.trim() || field.overview,
+            salaryBenchmarks: updatedBenchmarks
+          };
+        }
+        return field;
+      });
+    } else {
+      const newId = `custom-field-${Date.now()}`;
+      const newField: EceEeeCareerField = {
+        id: newId,
+        number: careerFields.length + 1,
+        title: fieldFormData.title.trim(),
+        departmentFocus: fieldFormData.departmentFocus,
+        marketDemand: fieldFormData.marketDemand.trim(),
+        marketDemandTier: fieldFormData.marketDemandTier,
+        tagline: fieldFormData.tagline.trim(),
+        engineeringFocusFull: fieldFormData.engineeringFocusFull.trim() || fieldFormData.tagline.trim(),
+        skillPrerequisites: skills.length ? skills : ['Signals & Systems', 'Digital Logic', 'C++'],
+        keyTechnologies: techs.length ? techs : ['FPGA', 'DSP', 'MATLAB'],
+        majorEmployers: employers.length ? employers : ['Qualcomm', 'TI', 'Bosch'],
+        overview: fieldFormData.overview.trim() || fieldFormData.tagline.trim(),
+        salaryBenchmarks: [
+          {
+            experienceLevel: 'Entry (0-2 yrs)',
+            indiaLpaRange: fieldFormData.entrySalaryRange.trim(),
+            indiaMedianLpa: fieldFormData.entryMedianLpa.trim(),
+            globalUsdRange: '$85k - 110k',
+            keyDrivers: ['Hands-on lab project', 'EDA tool mastery']
+          },
+          {
+            experienceLevel: 'Mid-Level (3-6 yrs)',
+            indiaLpaRange: '₹14 - 28 LPA',
+            indiaMedianLpa: '₹20 LPA',
+            globalUsdRange: '$120k - 165k',
+            keyDrivers: ['System-level architecture', 'Tapeout/bench experience']
+          },
+          {
+            experienceLevel: 'Senior / Lead (7-11 yrs)',
+            indiaLpaRange: '₹28 - 50 LPA',
+            indiaMedianLpa: '₹38 LPA',
+            globalUsdRange: '$175k - 240k',
+            keyDrivers: ['Cross-functional lead', 'Standards compliance signoff']
+          },
+          {
+            experienceLevel: 'Principal / Architect (12+ yrs)',
+            indiaLpaRange: '₹50 - 95+ LPA',
+            indiaMedianLpa: '₹68 LPA',
+            globalUsdRange: '$250k - 380k+',
+            keyDrivers: ['Next-gen product definition', 'Patents & regulatory leadership']
+          }
+        ],
+        hardwareKits: [
+          {
+            partNumber: 'CUSTOM-DEV-01',
+            name: 'Generic FPGA / DSP Evaluation Board',
+            manufacturer: 'Industry Standard',
+            category: 'Evaluation Board',
+            approxPriceInr: '₹8,500',
+            approxPriceUsd: '$100',
+            significance: 'Hardware prototyping and real-time validation',
+            keyProjectsSupported: ['Subsystem validation', 'Algorithm acceleration']
+          }
+        ],
+        industryStandards: [
+          {
+            code: 'IEEE / ISO Standard',
+            title: 'General Electronic Equipment Specification',
+            issuingBody: 'IEEE',
+            scope: 'Standard engineering design and verification compliance',
+            interviewRelevance: 'Questions on safety margins and test compliance'
+          }
+        ],
+        indianRdCenters: [
+          {
+            company: employers[0] || 'Tier-1 Engineering Center',
+            location: 'Bengaluru / Hyderabad',
+            labFocus: fieldFormData.title.trim(),
+            hiringRoles: ['Graduate Engineer Trainee', 'R&D Systems Engineer']
+          }
+        ],
+        dailyDeliverables: [
+          {
+            name: 'Specification & Architecture Doc',
+            frequency: 'Bi-weekly',
+            toolUsed: 'Git / Markdown',
+            description: 'Engineering design review and milestone checklist'
+          }
+        ],
+        academicPathway: {
+          recommendedElectives: ['Digital Signal Processing', 'Embedded Control', 'Electromagnetics'],
+          benchmarkTextbooks: [
+            {
+              title: 'Standard Domain Engineering Reference',
+              author: 'Leading Academic Author',
+              focus: 'Comprehensive fundamental theory and practical applications'
+            }
+          ],
+          nptelCourseraCourses: [
+            {
+              name: 'Advanced Hardware Systems Engineering',
+              institutionOrProf: 'IIT Madras / IIT Bombay',
+              platform: 'NPTEL'
+            }
+          ]
+        },
+        coreAreas: ['System Modeling', 'Component Selection', 'Hardware Validation'],
+        industryTools: [
+          {
+            name: 'Industry Tool Suite',
+            category: 'Simulation & Design',
+            description: 'EDA and modeling environment for hardware development'
+          }
+        ],
+        curatedProjects: [
+          {
+            title: `${fieldFormData.title.trim()} Prototype System`,
+            difficulty: 'Industry-Grade',
+            description: 'End-to-end hardware subsystem implementation and laboratory characterization',
+            technologies: techs.length ? techs : ['FPGA', 'DSP', 'MATLAB']
+          }
+        ],
+        vlsiEmbeddedConnection: 'Interfaces with custom ASIC silicon and real-time microcontroller control loops.',
+        careerProgression: [
+          {
+            level: 'Entry',
+            typicalTitles: ['Graduate Engineer Trainee', 'Associate Engineer'],
+            focus: 'Module-level schematic design and board bringup testing'
+          },
+          {
+            level: 'Mid-Level',
+            typicalTitles: ['Hardware Design Engineer', 'R&D Systems Engineer'],
+            focus: 'Subsystem architecture and bench characterization'
+          }
+        ],
+        interviewDrills: [
+          'Explain design tradeoffs between SNR, dynamic range, and power dissipation.',
+          'Describe how you debug unexpected signal degradation on an oscilloscope.'
+        ]
+      };
+      updatedList = [...careerFields, newField];
+      setExpandedFieldIds(prev => ({ ...prev, [newId]: true }));
+    }
+
+    setCareerFields(updatedList);
+    saveStoredEceEeeCareers(updatedList);
+    setIsFieldModalOpen(false);
   };
 
   const setFieldSubTab = (fieldId: string, tab: 'overview' | 'salaries' | 'hardware' | 'standards' | 'rd_centers' | 'academics') => {
@@ -106,7 +384,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
 
   // Filtered fields based on search & tags
   const filteredFields = useMemo(() => {
-    return ECE_EEE_CAREER_FIELDS.filter(field => {
+    return careerFields.filter(field => {
       if (departmentFilter !== 'All' && field.departmentFocus !== departmentFilter) {
         return false;
       }
@@ -128,11 +406,11 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
       }
       return true;
     });
-  }, [departmentFilter, demandFilter, searchQuery]);
+  }, [careerFields, departmentFilter, demandFilter, searchQuery]);
 
   // Aggregate hardware dev kits across all domains
   const allHardwareKits = useMemo(() => {
-    return ECE_EEE_CAREER_FIELDS.flatMap(field => 
+    return careerFields.flatMap(field => 
       field.hardwareKits.map(kit => ({
         ...kit,
         fieldTitle: field.title,
@@ -140,11 +418,11 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
         departmentFocus: field.departmentFocus
       }))
     );
-  }, []);
+  }, [careerFields]);
 
   // Aggregate industry standards across all domains
   const allIndustryStandards = useMemo(() => {
-    return ECE_EEE_CAREER_FIELDS.flatMap(field => 
+    return careerFields.flatMap(field => 
       field.industryStandards.map(std => ({
         ...std,
         fieldTitle: field.title,
@@ -152,7 +430,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
         departmentFocus: field.departmentFocus
       }))
     );
-  }, []);
+  }, [careerFields]);
 
   // Export comprehensive report to Markdown
   const generateMarkdownReport = () => {
@@ -166,7 +444,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
     });
 
     md += `\n---\n\n## 2. Real Compensation Benchmarks (India LPA & Global USD)\n\n`;
-    ECE_EEE_CAREER_FIELDS.forEach(field => {
+    careerFields.forEach(field => {
       md += `### ${field.title}\n`;
       md += `| Experience Tier | India Range (LPA) | India Median (LPA) | Global Range (USD) | Key Compensation Drivers |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- |\n`;
@@ -177,7 +455,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
     });
 
     md += `---\n\n## 3. Recommended Hardware Development Kits & Bench Equipment\n\n`;
-    ECE_EEE_CAREER_FIELDS.forEach(field => {
+    careerFields.forEach(field => {
       md += `### ${field.title}\n`;
       field.hardwareKits.forEach(kit => {
         md += `- **${kit.name}** (\`${kit.partNumber}\`) by ${kit.manufacturer}\n`;
@@ -188,7 +466,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
     });
 
     md += `---\n\n## 4. Key Industry Standards & Compliance Frameworks\n\n`;
-    ECE_EEE_CAREER_FIELDS.forEach(field => {
+    careerFields.forEach(field => {
       md += `### ${field.title}\n`;
       field.industryStandards.forEach(std => {
         md += `- **${std.code}**: ${std.title} (*${std.issuingBody}*)\n`;
@@ -198,7 +476,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
     });
 
     md += `---\n\n## 5. Indian R&D Centers & Facilities\n\n`;
-    ECE_EEE_CAREER_FIELDS.forEach(field => {
+    careerFields.forEach(field => {
       md += `### ${field.title}\n`;
       field.indianRdCenters.forEach(rd => {
         md += `- **${rd.company}** (${rd.location})\n`;
@@ -208,7 +486,7 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
     });
 
     md += `---\n\n## 6. Academic Preparation Pathways\n\n`;
-    ECE_EEE_CAREER_FIELDS.forEach(field => {
+    careerFields.forEach(field => {
       md += `### ${field.title}\n`;
       md += `- **Recommended College Electives**: ${field.academicPathway.recommendedElectives.join(', ')}\n`;
       md += `- **Landmark Textbooks**:\n`;
@@ -281,8 +559,20 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
       )}
 
       {/* Hero Header Banner */}
-      <div className="bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 rounded-3xl p-6 sm:p-8 text-white border border-neutral-800 shadow-sm relative overflow-hidden">
+      <div className="bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 rounded-3xl p-5 sm:p-8 text-white border border-neutral-800 shadow-sm relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-emerald-500/10 via-sky-500/5 to-transparent pointer-events-none" />
+
+        {/* Optional Go Back Button */}
+        {onGoBack && (
+          <button
+            onClick={onGoBack}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer w-fit mb-4 border border-white/15 relative z-10 active:scale-95"
+            title="Go back to previous section"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-neutral-300" />
+            <span>Back to Previous Section</span>
+          </button>
+        )}
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-3xl">
@@ -329,12 +619,12 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
             </div>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex flex-row md:flex-col gap-2 shrink-0">
+          {/* Quick Action Buttons - Stacks responsively on mobile */}
+          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 w-full sm:w-auto">
             {onNavigateToPrep && (
               <button
                 onClick={() => onNavigateToPrep()}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
                 title="Open Dedicated 16-Week Prep Tracks, Toolchains & Capstones"
               >
                 <Wrench className="w-4 h-4 text-neutral-950" />
@@ -344,14 +634,14 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
             )}
             <button
               onClick={handleDownloadMarkdown}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-xs border border-neutral-700 transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-xs border border-neutral-700 transition-all cursor-pointer whitespace-nowrap active:scale-95"
             >
               <Download className="w-4 h-4 text-neutral-300" />
               <span>Export Full .md Report</span>
             </button>
             <button
               onClick={handleCopyMarkdown}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-xs border border-neutral-700 transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-xs border border-neutral-700 transition-all cursor-pointer whitespace-nowrap active:scale-95"
             >
               <Copy className="w-4 h-4 text-neutral-300" />
               <span>Copy Markdown</span>
@@ -482,6 +772,21 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleOpenAddField}
+                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Career Field</span>
+                </button>
+                <button
+                  onClick={handleResetFields}
+                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-50 text-neutral-600 transition-all cursor-pointer flex items-center gap-1"
+                  title="Reset to official baseline"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Reset Baseline</span>
+                </button>
                 <button
                   onClick={expandAll}
                   className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-50 text-neutral-700 transition-all cursor-pointer"
@@ -673,6 +978,20 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenEditField(field); }}
+                        className="p-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer"
+                        title="Edit this career field"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id, field.title); }}
+                        className="p-1.5 rounded-lg border border-neutral-200 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Delete this career field"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       <span className="text-xs font-semibold text-neutral-500 hidden sm:inline">
                         {isExpanded ? 'Collapse' : 'Explore Real Data & Specs'}
                       </span>
@@ -1570,6 +1889,177 @@ export const EceEeeCareersView: React.FC<EceEeeCareersViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Add / Edit Career Field Modal */}
+      {isFieldModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs">
+          <div className="bg-white border border-neutral-200 rounded-2xl p-6 max-w-xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-emerald-600" />
+                <span>{editingFieldId ? 'Edit Career Field' : 'Add New Career Field'}</span>
+              </h3>
+              <button 
+                onClick={() => setIsFieldModalOpen(false)}
+                className="p-1 text-neutral-400 hover:text-neutral-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveField} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Career Field Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Avionics & Embedded Flight Controls"
+                  value={fieldFormData.title}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Department Focus</label>
+                  <select
+                    value={fieldFormData.departmentFocus}
+                    onChange={e => setFieldFormData(prev => ({ ...prev, departmentFocus: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="Both">Both (ECE &amp; EEE)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Demand Tier</label>
+                  <select
+                    value={fieldFormData.marketDemandTier}
+                    onChange={e => setFieldFormData(prev => ({ ...prev, marketDemandTier: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Massive">Massive</option>
+                    <option value="Very High">Very High</option>
+                    <option value="High">High</option>
+                    <option value="Stable">Stable</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Market Demand Label</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Massive (Aviation &amp; Space Boom)"
+                  value={fieldFormData.marketDemand}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, marketDemand: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Tagline / Short Scope *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. DO-178C flight control computers, ARINC-429 telemetry, MIL-STD avionics"
+                  value={fieldFormData.tagline}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, tagline: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Entry CTC Range (India)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ₹9.0 - 18.0 LPA"
+                    value={fieldFormData.entrySalaryRange}
+                    onChange={e => setFieldFormData(prev => ({ ...prev, entrySalaryRange: e.target.value }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Entry Median CTC</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ₹12.5 LPA"
+                    value={fieldFormData.entryMedianLpa}
+                    onChange={e => setFieldFormData(prev => ({ ...prev, entryMedianLpa: e.target.value }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Skill Prerequisites (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Control Systems, Digital Logic, RTOS, C/C++"
+                  value={fieldFormData.skillPrerequisites}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, skillPrerequisites: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Key Technologies &amp; Protocols (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. ARINC-429, MIL-STD-1553, MATLAB Simulink, VxWorks"
+                  value={fieldFormData.keyTechnologies}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, keyTechnologies: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Major Employers &amp; R&amp;D Centers (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Collins Aerospace, Honeywell, HAL, ISRO, Airbus India"
+                  value={fieldFormData.majorEmployers}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, majorEmployers: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Field Overview &amp; Industry Scope</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the day-to-day engineering focus, lab requirements, and real-world industrial relevance..."
+                  value={fieldFormData.overview}
+                  onChange={e => setFieldFormData(prev => ({ ...prev, overview: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsFieldModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{editingFieldId ? 'Update Career Field' : 'Save Career Field'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

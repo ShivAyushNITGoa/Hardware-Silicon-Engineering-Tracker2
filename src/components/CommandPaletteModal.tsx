@@ -18,7 +18,8 @@ import {
   X,
   ChevronRight,
   Sparkles,
-  Briefcase
+  Briefcase,
+  ShieldCheck
 } from 'lucide-react';
 import { Tab } from '../App';
 
@@ -26,6 +27,7 @@ interface CommandPaletteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (tab: Tab) => void;
+  isAdmin?: boolean;
 }
 
 interface CommandItem {
@@ -41,7 +43,8 @@ interface CommandItem {
 export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
   isOpen,
   onClose,
-  onNavigate
+  onNavigate,
+  isAdmin = false
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -57,6 +60,15 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       icon: <LayoutDashboard className="w-4 h-4 text-neutral-600" />,
       badge: 'Overview'
     },
+    ...(isAdmin ? [{
+      id: 'tab-admin-panel',
+      title: 'Admin Panel (Cohort Tracker & Universal Data)',
+      subtitle: 'Real-time multi-user cloud telemetry and universal database oversight',
+      category: 'Administration',
+      tab: 'admin_tracker' as Tab,
+      icon: <ShieldCheck className="w-4 h-4 text-purple-600" />,
+      badge: 'Admin Only'
+    }] : []),
     {
       id: 'tab-career',
       title: 'Semiconductor Career Preparation Roadmap',

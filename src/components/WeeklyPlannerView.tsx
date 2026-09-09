@@ -14,7 +14,9 @@ import {
   Award, 
   ChevronRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Edit2,
+  X
 } from 'lucide-react';
 import { WeeklyMilestone, SundayAuditLog } from '../types';
 import { 
@@ -26,6 +28,26 @@ import {
   getSundayAuditLogs,
   saveSundayAuditLogs
 } from '../utils/storage';
+
+interface MilestoneFormData {
+  week: number;
+  month: number;
+  phase: string;
+  title: string;
+  coreGoalsText: string;
+  deliverable: string;
+  exitGate: string;
+}
+
+const BLANK_MILESTONE_FORM: MilestoneFormData = {
+  week: 1,
+  month: 1,
+  phase: 'Phase 1: Foundations',
+  title: '',
+  coreGoalsText: '',
+  deliverable: '',
+  exitGate: ''
+};
 
 interface WeeklyPlannerViewProps {
   onNavigate?: (tab: any) => void;
@@ -41,6 +63,11 @@ export const WeeklyPlannerView: React.FC<WeeklyPlannerViewProps> = ({ onNavigate
   const [statusFilter, setStatusFilter] = useState<'All' | 'Done' | 'Pending'>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // Add / Edit Milestone State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingWeek, setEditingWeek] = useState<number | null>(null);
+  const [formData, setFormData] = useState<MilestoneFormData>(BLANK_MILESTONE_FORM);
+
   // Sunday audit form
   const [hoursLogged, setHoursLogged] = useState<number>(18);
   const [topicsDone, setTopicsDone] = useState<number>(4);
@@ -52,6 +79,93 @@ export const WeeklyPlannerView: React.FC<WeeklyPlannerViewProps> = ({ onNavigate
     const updated = { ...checks, [weekNum]: !checks[weekNum] };
     setChecks(updated);
     saveWeeklyMilestoneChecks(updated);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingWeek(null);
+    const maxWeek = milestones.reduce((max, m) => Math.max(max, m.week), 0);
+    setFormData({
+      week: maxWeek + 1,
+      month: Math.ceil((maxWeek + 1) / 4),
+      phase: 'Phase 2: Core Engineering',
+      title: '',
+      coreGoalsText: '',
+      deliverable: '',
+      exitGate: ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (m: WeeklyMilestone, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingWeek(m.week);
+    setFormData({
+      week: m.week,
+      month: m.month,
+      phase: m.phase,
+      title: m.title,
+      coreGoalsText: (m.coreGoals || []).join('\n'),
+      deliverable: m.deliverable,
+      exitGate: m.exitGate
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteMilestone = (weekNum: number, title: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete Week ${weekNum}: "${title}"?`)) {
+      const updated = milestones.filter(m => m.week !== weekNum);
+      setMilestones(updated);
+      saveStoredMilestones(updated);
+    }
+  };
+
+  const handleSaveMilestone = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !formData.deliverable.trim()) {
+      alert('Please fill in Milestone Title and Deliverable.');
+      return;
+    }
+
+    const goalsList = formData.coreGoalsText
+      .split('\n')
+      .map(g => g.trim())
+      .filter(Boolean);
+
+    let updatedList: WeeklyMilestone[];
+
+    if (editingWeek !== null) {
+      updatedList = milestones.map(m => {
+        if (m.week === editingWeek) {
+          return {
+            ...m,
+            week: formData.week,
+            month: formData.month,
+            phase: formData.phase,
+            title: formData.title.trim(),
+            coreGoals: goalsList.length > 0 ? goalsList : m.coreGoals,
+            deliverable: formData.deliverable.trim(),
+            exitGate: formData.exitGate.trim()
+          };
+        }
+        return m;
+      });
+    } else {
+      const newMilestone: WeeklyMilestone = {
+        week: formData.week,
+        month: formData.month,
+        phase: formData.phase,
+        title: formData.title.trim(),
+        coreGoals: goalsList.length > 0 ? goalsList : ['Complete assigned modules', 'Run validation tests'],
+        deliverable: formData.deliverable.trim(),
+        exitGate: formData.exitGate.trim()
+      };
+      updatedList = [...milestones, newMilestone].sort((a, b) => a.week - b.week);
+    }
+
+    setMilestones(updatedList);
+    saveStoredMilestones(updatedList);
+    setIsModalOpen(false);
   };
 
   const handleReset = () => {
@@ -196,10 +310,18 @@ export const WeeklyPlannerView: React.FC<WeeklyPlannerViewProps> = ({ onNavigate
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <button
+                  onClick={handleOpenAdd}
+                  className="px-2.5 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Milestone</span>
+                </button>
+
                 <button
                   onClick={handleReset}
-                  className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-2.5 sm:px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Reset Plan</span>
@@ -262,26 +384,45 @@ export const WeeklyPlannerView: React.FC<WeeklyPlannerViewProps> = ({ onNavigate
                       </h3>
                     </div>
 
-                    <button
-                      onClick={() => toggleWeekCheck(m.week)}
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                        isDone
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
-                      }`}
-                    >
-                      {isDone ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Cleared</span>
-                        </>
-                      ) : (
-                        <>
-                          <Circle className="w-3.5 h-3.5 text-neutral-400" />
-                          <span>Mark Cleared</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => toggleWeekCheck(m.week)}
+                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                          isDone
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
+                        }`}
+                      >
+                        {isDone ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Cleared</span>
+                          </>
+                        ) : (
+                          <>
+                            <Circle className="w-3.5 h-3.5 text-neutral-400" />
+                            <span>Mark Cleared</span>
+                          </>
+                        )}
+                      </button>
+
+                      <div className="flex items-center gap-0.5 border-l border-neutral-200 pl-1.5 ml-0.5">
+                        <button
+                          onClick={(e) => handleOpenEdit(m, e)}
+                          title="Edit Milestone"
+                          className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteMilestone(m.week, m.title, e)}
+                          title="Delete Milestone"
+                          className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Core Goals List */}
@@ -443,6 +584,159 @@ export const WeeklyPlannerView: React.FC<WeeklyPlannerViewProps> = ({ onNavigate
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Milestone Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-neutral-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-neutral-200 flex items-center justify-between bg-neutral-50/50">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                  {editingWeek !== null ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900">
+                    {editingWeek !== null ? `Edit Week ${editingWeek} Milestone` : 'Add Weekly Milestone'}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Set target week, phase, objectives, tangible deliverable, and Sunday exit gate.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveMilestone} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Week Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={52}
+                    required
+                    value={formData.week}
+                    onChange={(e) => {
+                      const w = parseInt(e.target.value) || 1;
+                      setFormData({ ...formData, week: w, month: Math.ceil(w / 4) });
+                    }}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Month
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={formData.month}
+                    onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Phase Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Phase 2: Core RTL"
+                    value={formData.phase}
+                    onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Milestone Focus Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Asynchronous FIFO Architecture & CDC Formal Proof"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800 block">
+                  Target Objectives (One objective per line)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder={"Read Cummins CDC paper sections 1-4\nDerive Gray code 2-flop synchronizer\nSimulate pointer depth under backpressure in ModelSim"}
+                  value={formData.coreGoalsText}
+                  onChange={(e) => setFormData({ ...formData, coreGoalsText: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-y font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Tangible Deliverable <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Synthesizable async_fifo.sv with CDC constraint file"
+                  value={formData.deliverable}
+                  onChange={(e) => setFormData({ ...formData, deliverable: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Sunday Exit Gate Condition <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Zero CDC metastability warnings under 100k random transactions"
+                  value={formData.exitGate}
+                  onChange={(e) => setFormData({ ...formData, exitGate: e.target.value })}
+                  className="w-full px-3 py-2 bg-rose-50/50 border border-rose-200 rounded-xl text-xs text-rose-950 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{editingWeek !== null ? 'Save Changes' : 'Create Milestone'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

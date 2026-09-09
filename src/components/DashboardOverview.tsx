@@ -470,18 +470,26 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
           <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
             <button
               onClick={() => onNavigate('ece_eee_careers')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs transition-all shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
             >
               <Briefcase className="w-4 h-4 text-neutral-950" />
               <span>Explore 6 Career Fields</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => onNavigate('career_prep')}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 font-semibold text-xs border border-white/15 transition-all cursor-pointer whitespace-nowrap"
-            >
-              <span>View 10 VLSI Tracks</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onNavigate('ece_eee_prep')}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-800/80 hover:bg-emerald-700/80 text-emerald-100 font-semibold text-xs border border-emerald-600/50 transition-all cursor-pointer whitespace-nowrap active:scale-95"
+              >
+                <span>16-Wk Prep Tracks</span>
+              </button>
+              <button
+                onClick={() => onNavigate('career_prep')}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 font-semibold text-xs border border-white/15 transition-all cursor-pointer whitespace-nowrap active:scale-95"
+              >
+                <span>10 VLSI Tracks</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

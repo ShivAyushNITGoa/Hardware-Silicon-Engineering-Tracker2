@@ -35,16 +35,25 @@ import {
   CheckCircle2,
   Flame,
   Grid,
-  Briefcase
+  Briefcase,
+  ArrowLeft,
+  Database,
+  ShieldCheck,
+  LogIn,
+  LogOut,
+  User as UserIcon,
+  Cloud
 } from 'lucide-react';
 
 import { usePWA } from './hooks/usePWA';
+import { useAuth } from './hooks/useAuth';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { DashboardOverview } from './components/DashboardOverview';
 import { CurriculumView } from './components/CurriculumView';
 import { CareerPrepRoadmapView } from './components/CareerPrepRoadmapView';
 import { EceEeeCareersView } from './components/EceEeeCareersView';
 import { EceEeePrepTracksView } from './components/EceEeePrepTracksView';
+import { AdminUserTrackerView } from './components/AdminUserTrackerView';
 import { NitGoaStrategySection } from './components/NitGoaStrategySection';
 import { NitGoaReportExportView } from './components/NitGoaReportExportView';
 import { ClassificationMatrixSection } from './components/ClassificationMatrixSection';
@@ -60,7 +69,12 @@ import { WeeklyPlannerView } from './components/WeeklyPlannerView';
 import { ResumePortfolioGenerator } from './components/ResumePortfolioGenerator';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
 import { BrandLogo, GDevelopersIcon } from './components/BrandLogo';
-import { getCheckedSubtopics, getStudiedEncyclopediaDocs, getCheckedToolSkills } from './utils/storage';
+import { 
+  getCheckedSubtopics, 
+  getStudiedEncyclopediaDocs, 
+  getCheckedToolSkills,
+  exportAllUniversalUserData
+} from './utils/storage';
 import { initialCurriculum } from './data/curriculumData';
 import { flatEncyclopediaDocs } from './data/encyclopediaData';
 
@@ -69,6 +83,7 @@ export type Tab =
   | 'career_prep'
   | 'ece_eee_careers'
   | 'ece_eee_prep'
+  | 'admin_tracker'
   | 'classification'
   | 'nit_goa_strategy'
   | 'nit_goa_report'
@@ -89,6 +104,7 @@ const TAB_LABELS: Record<Tab, { title: string; category: string }> = {
   career_prep: { title: 'Career Prep Roadmap', category: '10 Tracks & Free Platforms' },
   ece_eee_careers: { title: 'ECE & EEE Career Report', category: 'Beyond VLSI & Embedded • 6 Core Fields' },
   ece_eee_prep: { title: 'ECE & EEE Prep Tracks', category: '16-Wk Roadmaps, Free EDA, Capstones & Drills' },
+  admin_tracker: { title: 'Admin Multi-User Tracker', category: 'Cohort Monitoring & Telemetry • shivshivamxyz@gmail.com' },
   classification: { title: 'Domain Classification', category: 'Frontend / Backend • Jobs, Skills & Knowledge' },
   nit_goa_strategy: { title: 'NIT Goa EEE → VLSI Roadmap', category: '6th Sem Plan & Electives' },
   nit_goa_report: { title: 'Full Academic Strategy Report', category: 'NIT Goa EEE → VLSI • 9 Sections & Export' },
@@ -118,6 +134,18 @@ export default function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  // Authentication & Cloud Sync hook
+  const {
+    currentUser,
+    isAdmin,
+    isSyncing,
+    lastSyncedAt,
+    login,
+    logout,
+    syncToCloud
+  } = useAuth();
 
   // Progressive Web App hook
   const { 
@@ -190,12 +218,82 @@ export default function App() {
     }
   };
 
-  const handleTabChange = (tab: Tab) => {
+  // Tab navigation history stack for back features
+  const [tabHistory, setTabHistory] = useState<Tab[]>(() => {
+    try {
+      const hash = window.location.hash.replace('#', '') as Tab;
+      if (hash && TAB_LABELS[hash]) {
+        return ['dashboard', hash];
+      }
+    } catch (e) {}
+    return ['dashboard'];
+  });
+
+  const canGoBack = tabHistory.length > 1 || activeTab !== 'dashboard';
+  const previousTab = tabHistory.length > 1 ? tabHistory[tabHistory.length - 2] : 'dashboard';
+
+  const handleTabChange = (tab: Tab, addToHistory = true) => {
     setActiveTab(tab);
+    if (addToHistory) {
+      setTabHistory(prev => (prev[prev.length - 1] === tab ? prev : [...prev, tab]));
+    }
     setIsMobileDrawerOpen(false);
     // Smooth scroll to top of main container
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      window.history.pushState({ tab }, '', `#${tab}`);
+    } catch (e) {}
   };
+
+  const handleGoBack = () => {
+    if (tabHistory.length > 1) {
+      const copy = [...tabHistory];
+      copy.pop(); // remove current
+      const prev = copy[copy.length - 1];
+      setTabHistory(copy);
+      setActiveTab(prev);
+      setIsMobileDrawerOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      try {
+        window.history.replaceState({ tab: prev }, '', `#${prev}`);
+      } catch (e) {}
+    } else {
+      setActiveTab('dashboard');
+      setTabHistory(['dashboard']);
+      setIsMobileDrawerOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      try {
+        window.history.replaceState({ tab: 'dashboard' }, '', '#dashboard');
+      } catch (e) {}
+    }
+  };
+
+  // Sync hash routing and browser back/forward buttons
+  useEffect(() => {
+    try {
+      const hash = window.location.hash.replace('#', '') as Tab;
+      if (hash && TAB_LABELS[hash]) {
+        setActiveTab(hash);
+        setTabHistory(['dashboard', hash]);
+      }
+    } catch (e) {}
+
+    const onPopState = (e: PopStateEvent) => {
+      if (e.state && e.state.tab && TAB_LABELS[e.state.tab as Tab]) {
+        setActiveTab(e.state.tab as Tab);
+        setTabHistory(prev => {
+          if (prev.length > 1) {
+            const next = [...prev];
+            next.pop();
+            return next;
+          }
+          return prev;
+        });
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-100 text-neutral-900 font-sans flex flex-col antialiased">
@@ -207,75 +305,297 @@ export default function App() {
         </div>
       )}
       
-      {/* Top Global Command Header */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-30 px-3 sm:px-5 py-2.5 flex items-center justify-between shadow-2xs">
-        {/* Left: Mobile Menu Toggle, Brand Logo & Breadcrumb */}
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+      {/* Top Global Command Header - Fully Responsive */}
+      <header className="bg-white border-b border-neutral-200 sticky top-0 z-30 px-2 sm:px-4 lg:px-5 py-2 sm:py-2.5 flex items-center justify-between gap-1 sm:gap-3 shadow-2xs w-full flex-nowrap overflow-hidden">
+        {/* Left: Mobile Menu Toggle, Back Navigation, Brand Logo & Breadcrumb */}
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 mr-1">
           {/* Mobile Hamburger Drawer Trigger */}
           <button
             onClick={() => setIsMobileDrawerOpen(true)}
-            className="md:hidden p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="md:hidden p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer shrink-0 active:scale-95"
             aria-label="Open Navigation Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
 
+          {/* Global Back Button (Active whenever not on root dashboard or history exists) */}
+          {canGoBack && (
+            <button
+              onClick={handleGoBack}
+              className="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-bold text-neutral-700 hover:text-neutral-950 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 transition-all cursor-pointer shadow-2xs shrink-0 active:scale-95"
+              title={`Back to ${TAB_LABELS[previousTab]?.title || 'Previous Section'}`}
+              aria-label="Back to previous section"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-neutral-700 shrink-0" />
+              <span className="hidden sm:inline font-semibold">Back</span>
+            </button>
+          )}
+
           {/* Brand Logo & Name */}
           <div 
             onClick={() => handleTabChange('dashboard')} 
-            className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
+            className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group min-w-0 max-w-[130px] min-[400px]:max-w-[180px] sm:max-w-none shrink"
           >
-            <BrandLogo size="md" variant="full" theme="light" subtitle="Silicon Engineering OS • Ayush Kumar" />
+            <GDevelopersIcon className="w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <div className="font-bold text-xs sm:text-base tracking-tight text-neutral-950 truncate leading-tight">
+                <span className="text-[#9ca818]">The</span> GDevelopers
+              </div>
+              <span className="text-[9px] sm:text-[10px] text-neutral-500 font-medium truncate leading-none hidden sm:inline">
+                Silicon OS • Ayush Kumar
+              </span>
+            </div>
           </div>
 
-          <div className="h-4 w-px bg-neutral-200 hidden sm:block mx-1 shrink-0" />
+          <div className="h-4 w-px bg-neutral-200 hidden lg:block mx-1 shrink-0" />
 
-          {/* Breadcrumb Indicator - hidden on xs phones to guarantee full logo prominence */}
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500 truncate sm:max-w-xs md:max-w-md">
-            <span className="hidden md:inline font-medium text-neutral-400">
+          {/* Breadcrumb Indicator - hidden on small/medium screens to prevent squeeze */}
+          <div className="hidden lg:flex items-center gap-1.5 text-xs text-neutral-500 truncate max-w-xs">
+            <span className="font-medium text-neutral-400">
               {TAB_LABELS[activeTab]?.category || 'Section'}
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-neutral-300 hidden md:inline shrink-0" />
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
             <span className="font-bold text-neutral-900 truncate">
               {TAB_LABELS[activeTab]?.title || 'Dashboard'}
             </span>
           </div>
         </div>
 
-        {/* Right: Quick Action Controls & Live Study Badges */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Live Progress Pill */}
-          <div 
-            onClick={() => handleTabChange('encyclopedia')}
-            className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-neutral-50 border border-neutral-200 rounded-lg text-[11px] font-medium text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors"
-            title="Curriculum & Encyclopedia Study Progress"
-          >
-            <div className="flex items-center gap-1 text-emerald-700 font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{studyProgress.doneSubs}/{studyProgress.totalSubs} Subs</span>
-            </div>
-            <span className="text-neutral-300">&bull;</span>
-            <div className="flex items-center gap-1 text-indigo-700 font-semibold">
-              <Library className="w-3.5 h-3.5" />
-              <span>{studyProgress.doneDocs}/336 Docs</span>
-            </div>
-          </div>
-
+        {/* Right: Quick Action Controls, User Profile, Admin Controls */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 flex-nowrap">
           {/* Quick Search Button / Command Palette Trigger */}
+          {/* Mobile Icon-only Button */}
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-600 hover:text-neutral-900 border border-neutral-200/60 text-xs font-medium transition-all shadow-2xs cursor-pointer"
+            className="sm:hidden p-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 border border-neutral-200/70 transition-all cursor-pointer shadow-2xs shrink-0 active:scale-95"
+            title="Search anywhere (Ctrl+K)"
+            aria-label="Search anywhere"
+          >
+            <Search className="w-4 h-4 text-neutral-600" />
+          </button>
+
+          {/* Tablet & Desktop Full Search Bar */}
+          <button
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-600 hover:text-neutral-900 border border-neutral-200/60 text-xs font-medium transition-all shadow-2xs cursor-pointer shrink-0"
             title="Search anywhere (Ctrl+K)"
           >
-            <Search className="w-3.5 h-3.5 text-neutral-500" />
-            <span className="hidden sm:inline">Search tracker...</span>
-            <kbd className="text-[10px] font-semibold bg-white px-1.5 py-0.5 rounded border border-neutral-300/80 text-neutral-500 shadow-2xs">
+            <Search className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+            <span className="hidden md:inline">Search tracker...</span>
+            <span className="md:hidden">Search</span>
+            <kbd className="text-[10px] font-semibold bg-white px-1.5 py-0.5 rounded border border-neutral-300/80 text-neutral-500 shadow-2xs shrink-0">
               ⌘K
             </kbd>
           </button>
 
+          {/* Admin Panel Quick Jump - Single Button, Strictly visible to Admin */}
+          {isAdmin && (
+            <button
+              onClick={() => handleTabChange('admin_tracker')}
+              className={`inline-flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 ${
+                activeTab === 'admin_tracker'
+                  ? 'bg-purple-800 text-white shadow-xs'
+                  : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200'
+              }`}
+              title="Admin Multi-User Telemetry Portal (shivshivamxyz@gmail.com)"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+              <span className="hidden sm:inline">Admin</span>
+            </button>
+          )}
+
+          {/* Admin Universal Backup - Hidden on mobile, visible on desktop */}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                const dataStr = exportAllUniversalUserData();
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `universal_cohort_backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              }}
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 hover:text-purple-950 border border-purple-200 text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Admin Universal Backup: Export universal user data (.json)"
+            >
+              <Database className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+              <span>Universal Backup</span>
+            </button>
+          )}
+
+          {/* Cloud Synced Indicator for Students (Non-admin) */}
+          {!isAdmin && currentUser && (
+            <div 
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-[11px] font-semibold text-emerald-800 shadow-2xs shrink-0"
+              title="Your progress is automatically saved and synchronized to the cloud"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <span>Cloud Synced</span>
+            </div>
+          )}
+
+          {/* Google Sign In or User Profile Dropdown */}
+          {!currentUser ? (
+            <button
+              onClick={login}
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Sign in with Google to sync progress across devices and enable student telemetry"
+            >
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span className="hidden sm:inline">Sign In</span>
+            </button>
+          ) : (
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setIsUserMenuOpen(prev => !prev)}
+                className="inline-flex items-center gap-1 sm:gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-xs font-semibold text-neutral-800 transition-all cursor-pointer active:scale-95 shrink-0"
+                title={`Logged in as ${currentUser.email}`}
+              >
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || ''}
+                    referrerPolicy="no-referrer"
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-neutral-300 shrink-0"
+                  />
+                ) : (
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-neutral-900 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="max-w-[70px] sm:max-w-[100px] truncate hidden md:inline font-medium">
+                  {currentUser.displayName?.split(' ')[0] || currentUser.email?.split('@')[0]}
+                </span>
+                {isAdmin && (
+                  <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-800 text-[9px] font-bold shrink-0 hidden sm:inline-block">
+                    Admin
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              {isUserMenuOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsUserMenuOpen(false)} 
+                  />
+                  <div 
+                    className="absolute right-0 mt-2 w-60 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl border border-neutral-200 shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                  <div className="flex items-center gap-2.5 pb-2.5 border-b border-neutral-100">
+                    {currentUser.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt={currentUser.displayName || ''}
+                        referrerPolicy="no-referrer"
+                        className="w-8 h-8 rounded-full border border-neutral-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-neutral-800 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                        {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-neutral-900 truncate">
+                        {currentUser.displayName || currentUser.email?.split('@')[0]}
+                      </div>
+                      <div className="text-[11px] text-neutral-500 font-mono truncate">
+                        {currentUser.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="py-2 space-y-1 text-xs">
+                    <div className="px-2 py-1 text-[11px] text-neutral-500 flex items-center justify-between">
+                      <span>Role:</span>
+                      <span className="font-bold text-neutral-800">
+                        {isAdmin ? 'Super Admin' : 'Hardware Student'}
+                      </span>
+                    </div>
+
+                    <div className="px-2 py-1 text-[11px] text-neutral-500 flex items-center justify-between">
+                      <span>Cloud Telemetry:</span>
+                      <span className="text-emerald-700 font-semibold text-[11px]">
+                        {isSyncing ? 'Syncing...' : 'Connected (Live)'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        await syncToCloud();
+                        setIsUserMenuOpen(false);
+                      }}
+                      disabled={isSyncing}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 text-neutral-700 font-medium text-xs flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span>Sync Progress to Cloud</span>
+                      <span className="text-[10px] text-neutral-400">
+                        {isSyncing ? 'Saving...' : 'Sync'}
+                      </span>
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          handleTabChange('admin_tracker');
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Admin Cohort Tracker</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-neutral-100">
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg hover:bg-rose-50 text-rose-700 font-medium text-xs flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+          {/* Live Progress Pill - Desktop Only */}
+          <div 
+            onClick={() => handleTabChange('encyclopedia')}
+            className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-neutral-50 border border-neutral-200 rounded-lg text-[11px] font-medium text-neutral-700 cursor-pointer hover:bg-neutral-100 transition-colors shrink-0"
+            title="Curriculum & Encyclopedia Study Progress"
+          >
+            <div className="flex items-center gap-1 text-emerald-700 font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{studyProgress.doneSubs}/{studyProgress.totalSubs} Subs</span>
+            </div>
+            <span className="text-neutral-300">&bull;</span>
+            <div className="flex items-center gap-1 text-indigo-700 font-semibold">
+              <Library className="w-3.5 h-3.5 shrink-0" />
+              <span>{studyProgress.doneDocs}/336 Docs</span>
+            </div>
+          </div>
+
           {/* Quick Shortcuts */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 shrink-0">
             <button
               onClick={() => handleTabChange('interviews')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
@@ -290,7 +610,7 @@ export default function App() {
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent hover:border-neutral-200 transition-colors hidden sm:flex items-center justify-center cursor-pointer"
+            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent hover:border-neutral-200 transition-colors hidden sm:flex items-center justify-center cursor-pointer shrink-0"
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -331,7 +651,7 @@ export default function App() {
               
               {/* Nav Items */}
               <nav className="space-y-1">
-                {renderNavItems(activeTab, handleTabChange, !isSidebarOpen)}
+                {renderNavItems(activeTab, handleTabChange, !isSidebarOpen, isAdmin)}
               </nav>
             </div>
 
@@ -383,7 +703,7 @@ export default function App() {
 
                 {/* Nav Items */}
                 <nav className="space-y-1">
-                  {renderNavItems(activeTab, handleTabChange, false)}
+                  {renderNavItems(activeTab, handleTabChange, false, isAdmin)}
                 </nav>
               </div>
 
@@ -424,6 +744,7 @@ export default function App() {
                   if (fieldId) setSelectedEceFieldId(fieldId);
                   handleTabChange('ece_eee_prep');
                 }}
+                onGoBack={handleGoBack}
               />
             </div>
           )}
@@ -436,6 +757,19 @@ export default function App() {
                   handleTabChange('ece_eee_careers');
                 }}
                 onNavigateToTools={() => handleTabChange('tools')}
+                onGoBack={handleGoBack}
+                onSyncToCloud={syncToCloud}
+                isAdmin={isAdmin}
+              />
+            </div>
+          )}
+
+          {activeTab === 'admin_tracker' && (
+            <div className="animate-in fade-in duration-200">
+              <AdminUserTrackerView
+                onGoBack={handleGoBack}
+                currentUserEmail={currentUser?.email}
+                onLogin={login}
               />
             </div>
           )}
@@ -597,6 +931,7 @@ export default function App() {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onNavigate={handleTabChange}
+        isAdmin={isAdmin}
       />
 
       {/* Progressive Web App Install Modal */}
@@ -616,7 +951,8 @@ export default function App() {
 function renderNavItems(
   activeTab: Tab, 
   onSelect: (tab: Tab) => void, 
-  isCompact = false
+  isCompact = false,
+  isAdmin = false
 ) {
   const items: Array<{
     id: Tab;
@@ -625,6 +961,12 @@ function renderNavItems(
     badge?: string;
   }> = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-4 h-4 shrink-0" />, label: 'Command Center', badge: 'Overview' },
+    ...(isAdmin ? [{ 
+      id: 'admin_tracker' as Tab, 
+      icon: <ShieldCheck className="w-4 h-4 shrink-0 text-purple-600" />, 
+      label: 'Admin Panel', 
+      badge: 'Admin Only' 
+    }] : []),
     { id: 'career_prep', icon: <Cpu className="w-4 h-4 shrink-0 text-cyan-600" />, label: 'Career Prep Roadmap', badge: '10 Tracks' },
     { id: 'ece_eee_careers', icon: <Briefcase className="w-4 h-4 shrink-0 text-emerald-600" />, label: 'ECE & EEE Career Options', badge: '6 Fields' },
     { id: 'ece_eee_prep', icon: <Sparkles className="w-4 h-4 shrink-0 text-emerald-500" />, label: 'ECE & EEE Prep Tracks', badge: '16 Wks' },

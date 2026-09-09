@@ -9,7 +9,8 @@ import {
   WeeklyMilestoneItem, 
   ColdOutreachTemplate, 
   HabitItem, 
-  RuleItem 
+  RuleItem,
+  SubdomainDetail
 } from '../types';
 
 import { initialCompanies } from '../data/companiesData';
@@ -23,6 +24,9 @@ import { weeklyMilestones } from '../data/weeklyPlanData';
 import { CareerPrepTrack, initialCareerPrepTracks } from '../data/careerPrepData';
 import { enrichCurriculumTrack, enrichCareerPrepTrack } from '../data/domainsData';
 import { StudentCollegeProfile } from '../data/universalCollegeData';
+import { ECE_EEE_CAREER_FIELDS, EceEeeCareerField } from '../data/eceEeeCareersData';
+import { ECE_EEE_PREP_TRACKS, EceEeeFieldPrepTrack } from '../data/eceEeePrepData';
+import { ALL_SUBDOMAINS } from '../data/classificationData';
 
 const STORAGE_KEYS = {
   CHECKED_SUBTOPICS: 'ayush_tracker_checked_subtopics',
@@ -54,7 +58,14 @@ const STORAGE_KEYS = {
   NIT_GOA_ELECTIVES: 'ayush_tracker_nit_goa_electives_v1',
   COLLEGE_PROFILE: 'ayush_tracker_universal_college_profile_v1',
   ECE_EEE_PREP_PROGRESS: 'ayush_tracker_ece_eee_prep_progress_v1',
-  ECE_EEE_PREP_BOOKMARKS: 'ayush_tracker_ece_eee_prep_bookmarks_v1'
+  ECE_EEE_PREP_BOOKMARKS: 'ayush_tracker_ece_eee_prep_bookmarks_v1',
+  ECE_EEE_PREP_NOTES: 'ayush_tracker_ece_eee_prep_notes_v1',
+  ECE_EEE_SELECTED_FIELD: 'ayush_tracker_ece_eee_selected_field_v1',
+  CUSTOM_ECE_EEE_CAREERS: 'ayush_tracker_custom_ece_eee_careers_v1',
+  CUSTOM_ECE_EEE_TRACKS: 'ayush_tracker_custom_ece_eee_prep_tracks_v1',
+  CUSTOM_ENCYCLOPEDIA_DOCS: 'ayush_tracker_custom_encyclopedia_docs_v1',
+  CUSTOM_ENCYCLOPEDIA_NOTES: 'ayush_tracker_custom_encyclopedia_notes_v1',
+  CUSTOM_SUBDOMAINS: 'ayush_tracker_custom_subdomains_v1'
 };
 
 export const DEFAULT_STUDENT_PROFILE: StudentCollegeProfile = {
@@ -66,6 +77,12 @@ export const DEFAULT_STUDENT_PROFILE: StudentCollegeProfile = {
   targetCareerGoal: 'Tier-1 Silicon MNC',
   notes: 'Preserved official NIT Goa handbook & EE545 FPGA elective plan'
 };
+
+export function notifyStorageChange() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('tracker_storage_updated'));
+  }
+}
 
 export function getStudentCollegeProfile(): StudentCollegeProfile {
   try {
@@ -79,6 +96,7 @@ export function getStudentCollegeProfile(): StudentCollegeProfile {
 export function saveStudentCollegeProfile(profile: StudentCollegeProfile) {
   try {
     localStorage.setItem(STORAGE_KEYS.COLLEGE_PROFILE, JSON.stringify(profile));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save student college profile', e);
   }
@@ -98,6 +116,7 @@ export function getNitGoaProgress(): Record<string, boolean> {
 export function saveNitGoaProgress(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.NIT_GOA_PROGRESS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save NIT Goa progress', e);
   }
@@ -128,6 +147,7 @@ export function getNitGoaElectives(): Record<string, 'selected' | 'completed' | 
 export function saveNitGoaElectives(data: Record<string, 'selected' | 'completed' | 'planned'>) {
   try {
     localStorage.setItem(STORAGE_KEYS.NIT_GOA_ELECTIVES, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save NIT Goa electives', e);
   }
@@ -145,6 +165,7 @@ export function getCheckedSubtopics(): Record<string, boolean> {
 export function saveCheckedSubtopics(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.CHECKED_SUBTOPICS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save checked subtopics', e);
   }
@@ -162,6 +183,7 @@ export function getCheckedToolSkills(): Record<string, boolean> {
 export function saveCheckedToolSkills(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.CHECKED_TOOL_SKILLS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save tool skills', e);
   }
@@ -179,6 +201,7 @@ export function getCompaniesOverrides(): Record<string, any> {
 export function saveCompaniesOverrides(data: Record<string, any>) {
   try {
     localStorage.setItem(STORAGE_KEYS.COMPANIES_OVERRIDE, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save company overrides', e);
   }
@@ -196,6 +219,7 @@ export function getDailyHabitsLog(): Record<string, boolean> {
 export function saveDailyHabitsLog(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.DAILY_HABITS_LOG, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save daily habits log', e);
   }
@@ -213,6 +237,7 @@ export function getInterviewQuestionsStatus(): Record<string, 'Mastered' | 'Revi
 export function saveInterviewQuestionsStatus(data: Record<string, 'Mastered' | 'Review' | 'Untested'>) {
   try {
     localStorage.setItem(STORAGE_KEYS.INTERVIEW_STATUS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save interview status', e);
   }
@@ -230,6 +255,7 @@ export function getSundayAuditLogs(): any[] {
 export function saveSundayAuditLogs(data: any[]) {
   try {
     localStorage.setItem(STORAGE_KEYS.SUNDAY_AUDIT_LOGS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save sunday audit logs', e);
   }
@@ -247,6 +273,7 @@ export function getWeeklyMilestoneChecks(): Record<number, boolean> {
 export function saveWeeklyMilestoneChecks(data: Record<number, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.WEEKLY_MILESTONES, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save weekly milestones', e);
   }
@@ -264,6 +291,7 @@ export function getInstitutionsOverrides(): Record<string, any> {
 export function saveInstitutionsOverrides(data: Record<string, any>) {
   try {
     localStorage.setItem(STORAGE_KEYS.INSTITUTIONS_OVERRIDE, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save institutions overrides', e);
   }
@@ -576,6 +604,7 @@ export function getCheckedCareerTasks(): Record<string, boolean> {
 export function saveCheckedCareerTasks(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.CAREER_PREP_TASKS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save career prep tasks', e);
   }
@@ -593,6 +622,7 @@ export function getCheckedCareerProjects(): Record<string, boolean> {
 export function saveCheckedCareerProjects(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.CAREER_PREP_PROJECTS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save career prep projects', e);
   }
@@ -616,6 +646,7 @@ export function getStoredCareerPrepTracks(): CareerPrepTrack[] {
 export function saveStoredCareerPrepTracks(list: CareerPrepTrack[]) {
   try {
     localStorage.setItem(STORAGE_KEYS.CUSTOM_CAREER_PREP_TRACKS, JSON.stringify(list));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save career prep tracks', e);
   }
@@ -624,6 +655,7 @@ export function saveStoredCareerPrepTracks(list: CareerPrepTrack[]) {
 export function resetStoredCareerPrepTracks(): CareerPrepTrack[] {
   try {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_CAREER_PREP_TRACKS);
+    notifyStorageChange();
   } catch (e) {}
   return initialCareerPrepTracks.map(enrichCareerPrepTrack);
 }
@@ -642,6 +674,7 @@ export function getStudiedEncyclopediaDocs(): Record<string, boolean> {
 export function saveStudiedEncyclopediaDocs(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.ENCYCLOPEDIA_STUDIED, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save studied encyclopedia docs', e);
   }
@@ -659,6 +692,7 @@ export function getBookmarkedEncyclopediaDocs(): Record<string, boolean> {
 export function saveBookmarkedEncyclopediaDocs(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.ENCYCLOPEDIA_BOOKMARKS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save bookmarked encyclopedia docs', e);
   }
@@ -687,6 +721,7 @@ export function getEceEeePrepProgress(): Record<string, boolean> {
 export function saveEceEeePrepProgress(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.ECE_EEE_PREP_PROGRESS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save ECE/EEE prep progress', e);
   }
@@ -704,9 +739,326 @@ export function getEceEeePrepBookmarks(): Record<string, boolean> {
 export function saveEceEeePrepBookmarks(data: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEYS.ECE_EEE_PREP_BOOKMARKS, JSON.stringify(data));
+    notifyStorageChange();
   } catch (e) {
     console.error('Failed to save ECE/EEE prep bookmarks', e);
   }
 }
+
+export function getEceEeePrepNotes(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ECE_EEE_PREP_NOTES);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveEceEeePrepNotes(notes: Record<string, string>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ECE_EEE_PREP_NOTES, JSON.stringify(notes));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save ECE/EEE prep notes', e);
+  }
+}
+
+export function getEceEeeSelectedField(): string {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ECE_EEE_SELECTED_FIELD);
+    return raw || 'telecom-wireless';
+  } catch (e) {
+    return 'telecom-wireless';
+  }
+}
+
+export function saveEceEeeSelectedField(fieldId: string) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ECE_EEE_SELECTED_FIELD, fieldId);
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save ECE/EEE selected field', e);
+  }
+}
+
+export function resetEceEeePrepData() {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.ECE_EEE_PREP_PROGRESS);
+    localStorage.removeItem(STORAGE_KEYS.ECE_EEE_PREP_BOOKMARKS);
+    localStorage.removeItem(STORAGE_KEYS.ECE_EEE_PREP_NOTES);
+  } catch (e) {
+    console.error('Failed to reset ECE/EEE prep data', e);
+  }
+}
+
+// --- Universal User Data Backup, Import & Cross-Device Portability ---
+
+export interface UniversalUserDataBackup {
+  version: string;
+  timestamp: string;
+  exportedBy: string;
+  studentProfile: StudentCollegeProfile;
+  eceEeePrepProgress: Record<string, boolean>;
+  eceEeePrepBookmarks: Record<string, boolean>;
+  eceEeePrepNotes: Record<string, string>;
+  selectedField: string;
+  nitGoaProgress: Record<string, boolean>;
+  nitGoaElectives: Record<string, string>;
+  curriculumTopicsChecked: Record<string, boolean>;
+  toolSkillsChecked: Record<string, boolean>;
+  encyclopediaStudied: Record<string, boolean>;
+  customEceEeeCareers?: EceEeeCareerField[];
+  customEceEeeTracks?: EceEeeFieldPrepTrack[];
+  customEncyclopediaDocs?: CustomEncyclopediaDoc[];
+  customEncyclopediaNotes?: Record<string, string>;
+  customSubdomains?: SubdomainDetail[];
+}
+
+export function exportAllUniversalUserData(): string {
+  const backup: UniversalUserDataBackup = {
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    exportedBy: 'Hardware & Silicon Engineering Tracker User',
+    studentProfile: getStudentCollegeProfile(),
+    eceEeePrepProgress: getEceEeePrepProgress(),
+    eceEeePrepBookmarks: getEceEeePrepBookmarks(),
+    eceEeePrepNotes: getEceEeePrepNotes(),
+    selectedField: getEceEeeSelectedField(),
+    nitGoaProgress: getNitGoaProgress(),
+    nitGoaElectives: getNitGoaElectives(),
+    curriculumTopicsChecked: getCheckedSubtopics(),
+    toolSkillsChecked: getCheckedToolSkills(),
+    encyclopediaStudied: getStudiedEncyclopediaDocs(),
+    customEceEeeCareers: getStoredEceEeeCareers(),
+    customEceEeeTracks: getStoredEceEeeTracks(),
+    customEncyclopediaDocs: getStoredCustomEncyclopediaDocs(),
+    customEncyclopediaNotes: getStoredEncyclopediaDocNotes(),
+    customSubdomains: getStoredSubdomains()
+  };
+  return JSON.stringify(backup, null, 2);
+}
+
+export function importUniversalUserData(jsonString: string): { success: boolean; message: string } {
+  try {
+    const data = JSON.parse(jsonString);
+    if (!data || typeof data !== 'object') {
+      return { success: false, message: 'Invalid JSON format' };
+    }
+
+    if (data.studentProfile) saveStudentCollegeProfile(data.studentProfile);
+    if (data.eceEeePrepProgress) saveEceEeePrepProgress(data.eceEeePrepProgress);
+    if (data.eceEeePrepBookmarks) saveEceEeePrepBookmarks(data.eceEeePrepBookmarks);
+    if (data.eceEeePrepNotes) saveEceEeePrepNotes(data.eceEeePrepNotes);
+    if (data.selectedField) saveEceEeeSelectedField(data.selectedField);
+    if (data.nitGoaProgress) saveNitGoaProgress(data.nitGoaProgress);
+    if (data.curriculumTopicsChecked) saveCheckedSubtopics(data.curriculumTopicsChecked);
+    if (data.toolSkillsChecked) saveCheckedToolSkills(data.toolSkillsChecked);
+    if (data.encyclopediaStudied) saveStudiedEncyclopediaDocs(data.encyclopediaStudied);
+    if (data.customEceEeeCareers && Array.isArray(data.customEceEeeCareers)) saveStoredEceEeeCareers(data.customEceEeeCareers);
+    if (data.customEceEeeTracks && Array.isArray(data.customEceEeeTracks)) saveStoredEceEeeTracks(data.customEceEeeTracks);
+    if (data.customEncyclopediaDocs && Array.isArray(data.customEncyclopediaDocs)) saveStoredCustomEncyclopediaDocs(data.customEncyclopediaDocs);
+    if (data.customEncyclopediaNotes) saveStoredEncyclopediaDocNotes(data.customEncyclopediaNotes);
+    if (data.customSubdomains && Array.isArray(data.customSubdomains)) saveStoredSubdomains(data.customSubdomains);
+
+    return { success: true, message: 'Universal user data imported and restored successfully.' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Failed to parse user data backup' };
+  }
+}
+
+// --- ECE & EEE Careers Persistence ---
+export function getStoredEceEeeCareers(): EceEeeCareerField[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_ECE_EEE_CAREERS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to read custom ECE/EEE careers', e);
+  }
+  return ECE_EEE_CAREER_FIELDS;
+}
+
+export function saveStoredEceEeeCareers(list: EceEeeCareerField[]) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_ECE_EEE_CAREERS, JSON.stringify(list));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save custom ECE/EEE careers', e);
+  }
+}
+
+export function resetStoredEceEeeCareers(): EceEeeCareerField[] {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_ECE_EEE_CAREERS);
+    notifyStorageChange();
+  } catch (e) {}
+  return ECE_EEE_CAREER_FIELDS;
+}
+
+// --- ECE & EEE Prep Tracks Persistence ---
+export function getStoredEceEeeTracks(): EceEeeFieldPrepTrack[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_ECE_EEE_TRACKS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to read custom ECE/EEE prep tracks', e);
+  }
+  return ECE_EEE_PREP_TRACKS;
+}
+
+export function saveStoredEceEeeTracks(list: EceEeeFieldPrepTrack[]) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_ECE_EEE_TRACKS, JSON.stringify(list));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save custom ECE/EEE prep tracks', e);
+  }
+}
+
+export function resetStoredEceEeeTracks(): EceEeeFieldPrepTrack[] {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_ECE_EEE_TRACKS);
+    notifyStorageChange();
+  } catch (e) {}
+  return ECE_EEE_PREP_TRACKS;
+}
+
+// --- Custom Encyclopedia Docs & Notes ---
+export interface CustomEncyclopediaDoc {
+  id: string;
+  volumeId: string;
+  title: string;
+  category: string;
+  tags: string[];
+  estimatedReadingTime: string;
+  summary: string;
+  markdownContent: string;
+  dateAdded?: string;
+}
+
+export function getStoredCustomEncyclopediaDocs(): CustomEncyclopediaDoc[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_ENCYCLOPEDIA_DOCS);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveStoredCustomEncyclopediaDocs(docs: CustomEncyclopediaDoc[]) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_ENCYCLOPEDIA_DOCS, JSON.stringify(docs));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save custom encyclopedia docs', e);
+  }
+}
+
+export function getStoredEncyclopediaDocNotes(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_ENCYCLOPEDIA_NOTES);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveStoredEncyclopediaDocNotes(notes: Record<string, string>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_ENCYCLOPEDIA_NOTES, JSON.stringify(notes));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save encyclopedia notes', e);
+  }
+}
+
+// --- Collect complete dataset for cloud synchronization & admin tracking ---
+export function getAllUserDataForCloud() {
+  const studentProfile = getStudentCollegeProfile();
+  const eceEeeProgress = getEceEeePrepProgress();
+  const eceEeeBookmarks = getEceEeePrepBookmarks();
+  const eceEeeNotes = getEceEeePrepNotes();
+  const activeField = getEceEeeSelectedField();
+  const curriculumSubs = getCheckedSubtopics();
+  const toolSkills = getCheckedToolSkills();
+  const studiedDocs = getStudiedEncyclopediaDocs();
+  const nitGoaProgress = getNitGoaProgress();
+  const nitGoaElectives = getNitGoaElectives();
+  const interviewStatus = getInterviewQuestionsStatus();
+  const weeklyMilestones = getWeeklyMilestoneChecks();
+  const habitsLog = getDailyHabitsLog();
+
+  const eceCompleted = Object.values(eceEeeProgress).filter(Boolean).length;
+  const curriculumDone = Object.values(curriculumSubs).filter(Boolean).length;
+  const toolSkillsDone = Object.values(toolSkills).filter(Boolean).length;
+  const docsDone = Object.values(studiedDocs).filter(Boolean).length;
+  const nitGoaDone = Object.values(nitGoaProgress).filter(Boolean).length;
+  const notesTotal = Object.keys(eceEeeNotes).length;
+  const totalCompleted = eceCompleted + curriculumDone + toolSkillsDone + docsDone + nitGoaDone;
+  const ecePercent = Math.min(100, Math.round((eceCompleted / 120) * 100));
+
+  return {
+    studentProfile,
+    activeField: activeField || 'telecom-wireless',
+    eceEeeProgress,
+    eceEeeBookmarks,
+    eceEeeNotes,
+    curriculumSubs,
+    toolSkills,
+    studiedDocs,
+    nitGoaProgress,
+    nitGoaElectives,
+    interviewStatus,
+    weeklyMilestones,
+    habitsLog,
+    universalDataSnapshot: exportAllUniversalUserData(),
+    statsSummary: {
+      totalCompleted,
+      eceCompleted,
+      ecePercent,
+      curriculumDone,
+      toolSkillsDone,
+      nitGoaDone,
+      notesTotal,
+      lastSynced: new Date().toISOString()
+    }
+  };
+}
+
+export function getStoredSubdomains(): SubdomainDetail[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_SUBDOMAINS);
+    if (!raw) return ALL_SUBDOMAINS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : ALL_SUBDOMAINS;
+  } catch {
+    return ALL_SUBDOMAINS;
+  }
+}
+
+export function saveStoredSubdomains(subdomains: SubdomainDetail[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_SUBDOMAINS, JSON.stringify(subdomains));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save subdomains:', e);
+  }
+}
+
+export function resetStoredSubdomains(): SubdomainDetail[] {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_SUBDOMAINS);
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to reset subdomains:', e);
+  }
+  return ALL_SUBDOMAINS;
+}
+
 
 

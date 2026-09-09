@@ -24,7 +24,12 @@ import {
   Compass,
   ShieldCheck,
   CircuitBoard,
-  Terminal
+  Terminal,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Check
 } from 'lucide-react';
 import { 
   CareerPrepTrack, 
@@ -48,6 +53,28 @@ import { NitGoaStrategySection } from './NitGoaStrategySection';
 import { ClassificationMatrixSection } from './ClassificationMatrixSection';
 import { EceEeeCareersView } from './EceEeeCareersView';
 
+interface CareerTrackFormData {
+  number: number;
+  title: string;
+  tagline: string;
+  whyLearn: string;
+  companiesText: string;
+  rolesText: string;
+  tasksText: string;
+  domainName: string;
+}
+
+const BLANK_CAREER_TRACK_FORM: CareerTrackFormData = {
+  number: 1,
+  title: '',
+  tagline: '',
+  whyLearn: '',
+  companiesText: 'Qualcomm, NVIDIA, Intel, AMD',
+  rolesText: 'RTL Engineer, ASIC Engineer',
+  tasksText: 'Digital Logic & Gate-level synthesis\nSequential Circuits & State Machines\nFormal Verification & CDC Rules',
+  domainName: 'Digital RTL & ASIC'
+};
+
 export const CareerPrepRoadmapView: React.FC = () => {
   const [tracks, setTracks] = useState<CareerPrepTrack[]>(() => getStoredCareerPrepTracks());
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>(() => getCheckedCareerTasks());
@@ -62,6 +89,11 @@ export const CareerPrepRoadmapView: React.FC = () => {
   const [projectCategoryFilter, setProjectCategoryFilter] = useState<string>('All');
   const [projectStatusFilter, setProjectStatusFilter] = useState<'All' | 'Pending' | 'Done'>('All');
   const [directorySearchQuery, setDirectorySearchQuery] = useState('');
+
+  // Add / Edit Career Track State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<CareerTrackFormData>(BLANK_CAREER_TRACK_FORM);
 
   const [expandedTrackIds, setExpandedTrackIds] = useState<Record<string, boolean>>({
     'track-digital-design': true,
@@ -291,6 +323,116 @@ export const CareerPrepRoadmapView: React.FC = () => {
     setExpandedTrackIds({});
   };
 
+  const handleOpenAddTrack = () => {
+    setEditingTrackId(null);
+    const maxNum = tracks.reduce((max, t) => Math.max(max, t.number || 0), 0);
+    setFormData({
+      ...BLANK_CAREER_TRACK_FORM,
+      number: maxNum + 1
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditTrack = (track: CareerPrepTrack, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTrackId(track.id);
+    setFormData({
+      number: track.number,
+      title: track.title,
+      tagline: track.tagline,
+      whyLearn: track.whyLearn,
+      companiesText: (track.companies || []).join(', '),
+      rolesText: (track.roles || []).join(', '),
+      tasksText: (track.tasks || []).map(t => t.name).join('\n'),
+      domainName: track.domainName || 'Digital RTL & ASIC'
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteTrack = (trackId: string, trackTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete career specialization track "${trackTitle}"?`)) {
+      const updated = tracks.filter(t => t.id !== trackId);
+      setTracks(updated);
+      saveStoredCareerPrepTracks(updated);
+    }
+  };
+
+  const handleSaveTrack = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !formData.whyLearn.trim()) {
+      alert('Please fill in Track Title and Why Learn.');
+      return;
+    }
+
+    const companies = formData.companiesText.split(',').map(c => c.trim()).filter(Boolean);
+    const roles = formData.rolesText.split(',').map(r => r.trim()).filter(Boolean);
+    const taskLines = formData.tasksText.split('\n').map(l => l.trim()).filter(Boolean);
+
+    let updatedList: CareerPrepTrack[];
+
+    if (editingTrackId) {
+      updatedList = tracks.map(t => {
+        if (t.id === editingTrackId) {
+          const tasks = taskLines.map((line, idx) => {
+            const existing = t.tasks[idx];
+            return {
+              id: existing?.id || `task-${Date.now()}-${idx}`,
+              name: line,
+              subPart: existing?.subPart,
+              jobRole: existing?.jobRole
+            };
+          });
+
+          return {
+            ...t,
+            number: formData.number,
+            title: formData.title.trim(),
+            tagline: formData.tagline.trim(),
+            whyLearn: formData.whyLearn.trim(),
+            companies: companies.length > 0 ? companies : t.companies,
+            roles: roles.length > 0 ? roles : t.roles,
+            domainName: formData.domainName.trim(),
+            tasks: tasks.length > 0 ? tasks : t.tasks
+          };
+        }
+        return t;
+      });
+    } else {
+      const newTrackId = `track-custom-${Date.now()}`;
+      const newTasks = taskLines.map((line, idx) => ({
+        id: `task-${Date.now()}-${idx}`,
+        name: line
+      }));
+
+      const newTrack: CareerPrepTrack = {
+        id: newTrackId,
+        number: formData.number,
+        title: formData.title.trim(),
+        tagline: formData.tagline.trim() || 'Core Engineering Track',
+        whyLearn: formData.whyLearn.trim(),
+        companies: companies.length > 0 ? companies : ['Qualcomm', 'Intel', 'NVIDIA'],
+        roles: roles.length > 0 ? roles : ['Silicon Engineer'],
+        tasks: newTasks.length > 0 ? newTasks : [{ id: `task-${Date.now()}-1`, name: 'Core Foundations' }],
+        studyPlatforms: [],
+        domainName: formData.domainName.trim()
+      };
+
+      updatedList = [...tracks, newTrack].sort((a, b) => (a.number || 0) - (b.number || 0));
+    }
+
+    setTracks(updatedList);
+    saveStoredCareerPrepTracks(updatedList);
+    setIsModalOpen(false);
+  };
+
+  const handleResetTracks = () => {
+    if (window.confirm('Reset all career specialization tracks to default curriculum?')) {
+      const def = resetStoredCareerPrepTracks();
+      setTracks(def);
+    }
+  };
+
   // Reset all checked tasks
   const handleResetProgress = () => {
     if (window.confirm('Are you sure you want to reset all checked tasks & projects in the Career Prep Dashboard?')) {
@@ -488,20 +630,34 @@ export const CareerPrepRoadmapView: React.FC = () => {
           </div>
 
           {/* Quick Actions (Reset & Expand/Collapse) */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {activeSubTab === 'tracks' && (
               <>
                 <button
+                  onClick={handleOpenAddTrack}
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg shadow-xs transition-colors cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Add Track</span>
+                </button>
+                <button
                   onClick={expandAll}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg border border-neutral-200 transition-colors cursor-pointer"
+                  className="px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg border border-neutral-200 transition-colors cursor-pointer shrink-0"
                 >
                   Expand All
                 </button>
                 <button
                   onClick={collapseAll}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg border border-neutral-200 transition-colors cursor-pointer"
+                  className="px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg border border-neutral-200 transition-colors cursor-pointer shrink-0"
                 >
                   Collapse All
+                </button>
+                <button
+                  onClick={handleResetTracks}
+                  title="Reset tracks to default"
+                  className="px-2 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg border border-neutral-200 transition-colors cursor-pointer shrink-0"
+                >
+                  Reset Tracks
                 </button>
               </>
             )}
@@ -509,10 +665,11 @@ export const CareerPrepRoadmapView: React.FC = () => {
             <button
               onClick={handleResetProgress}
               title="Reset task checkmarks"
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-neutral-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-neutral-200 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-neutral-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-neutral-200 transition-colors cursor-pointer shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Reset Checkmarks</span>
+              <span className="sm:hidden">Reset Checks</span>
             </button>
           </div>
         </div>
@@ -791,7 +948,7 @@ export const CareerPrepRoadmapView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                       {/* Progress Badge */}
                       <div className="text-right hidden sm:block">
                         <div className="text-xs font-bold text-neutral-800">
@@ -803,6 +960,24 @@ export const CareerPrepRoadmapView: React.FC = () => {
                             style={{ width: `${trackPercent}%` }}
                           />
                         </div>
+                      </div>
+
+                      {/* Edit and Delete Track Actions */}
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={(e) => handleOpenEditTrack(track, e)}
+                          className="p-1.5 rounded-md text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                          title="Edit track"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteTrack(track.id, track.title, e)}
+                          className="p-1.5 rounded-md text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Delete track"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
 
                       <button
@@ -1259,6 +1434,145 @@ export const CareerPrepRoadmapView: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ADD / EDIT TRACK MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-neutral-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">
+                  {editingTrackId ? 'Edit Career Track' : 'Add Specialization Track'}
+                </h3>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Customize track title, target roles, companies, and milestone tasks.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveTrack} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Track #</label>
+                  <input
+                    type="number"
+                    value={formData.number}
+                    onChange={e => setFormData({ ...formData, number: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold text-neutral-700 mb-1">Domain</label>
+                  <input
+                    type="text"
+                    value={formData.domainName}
+                    onChange={e => setFormData({ ...formData, domainName: e.target.value })}
+                    placeholder="e.g. Digital RTL & ASIC, Verification, Embedded"
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Track Title *</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Digital RTL Architecture & Timing"
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Tagline / Summary</label>
+                <input
+                  type="text"
+                  value={formData.tagline}
+                  onChange={e => setFormData({ ...formData, tagline: e.target.value })}
+                  placeholder="Brief summary of what this track focuses on"
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">Why Learn? *</label>
+                <textarea
+                  rows={2}
+                  value={formData.whyLearn}
+                  onChange={e => setFormData({ ...formData, whyLearn: e.target.value })}
+                  placeholder="Explain why mastering this specialization is critical for semiconductor industry..."
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Companies (comma separated)</label>
+                  <input
+                    type="text"
+                    value={formData.companiesText}
+                    onChange={e => setFormData({ ...formData, companiesText: e.target.value })}
+                    placeholder="Qualcomm, NVIDIA, AMD, Intel"
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">Target Roles (comma separated)</label>
+                  <input
+                    type="text"
+                    value={formData.rolesText}
+                    onChange={e => setFormData({ ...formData, rolesText: e.target.value })}
+                    placeholder="RTL Engineer, ASIC Designer"
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-700 mb-1">
+                  Milestone Tasks (one task per line)
+                </label>
+                <textarea
+                  rows={4}
+                  value={formData.tasksText}
+                  onChange={e => setFormData({ ...formData, tasksText: e.target.value })}
+                  placeholder="Number Systems&#10;Combinational Circuits&#10;FSM State Encoding"
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-mono"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer shadow-xs"
+                >
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>{editingTrackId ? 'Save Changes' : 'Create Track'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

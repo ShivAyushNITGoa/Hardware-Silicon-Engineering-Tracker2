@@ -26,12 +26,37 @@ import {
   saveCheckedToolSkills
 } from '../utils/storage';
 
+interface ToolFormData {
+  name: string;
+  category: string;
+  licenseType: string;
+  description: string;
+  standardCommand: string;
+  documentationUrl: string;
+  skillsText: string;
+}
+
+const BLANK_TOOL_FORM: ToolFormData = {
+  name: '',
+  category: 'Simulation & Verification',
+  licenseType: 'Open Source / Academic',
+  description: '',
+  standardCommand: '',
+  documentationUrl: '',
+  skillsText: ''
+};
+
 export const ToolsMasterView: React.FC = () => {
   const [tools, setTools] = useState<EDATool[]>(() => getStoredTools());
   const [checkedSkills, setCheckedSkills] = useState<Record<string, boolean>>(() => getCheckedToolSkills());
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+
+  // Add / Edit Modal State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ToolFormData>(BLANK_TOOL_FORM);
 
   const toggleSkill = (skillId: string) => {
     const updated = { ...checkedSkills, [skillId]: !checkedSkills[skillId] };
@@ -43,6 +68,106 @@ export const ToolsMasterView: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedCommand(text);
     setTimeout(() => setCopiedCommand(null), 2000);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormData(BLANK_TOOL_FORM);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (t: EDATool, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(t.id);
+    const skillsLines = (t.keySkillsToMaster || [])
+      .map(s => s.name ? `${s.name}: ${s.description || ''}` : '')
+      .filter(Boolean)
+      .join('\n');
+
+    setFormData({
+      name: t.name || '',
+      category: t.category || 'Simulation & Verification',
+      licenseType: t.licenseType || 'Open Source / Academic',
+      description: t.description || '',
+      standardCommand: t.standardCommand || '',
+      documentationUrl: t.documentationUrl || '',
+      skillsText: skillsLines
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteTool = (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete toolchain "${name}"?`)) {
+      const updated = tools.filter(t => t.id !== id);
+      setTools(updated);
+      saveStoredTools(updated);
+    }
+  };
+
+  const handleSaveTool = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.description.trim()) {
+      alert('Please fill in at least the Tool Name and Description.');
+      return;
+    }
+
+    const parsedSkills = formData.skillsText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map((line, idx) => {
+        const parts = line.split(':');
+        const skillName = parts[0].trim();
+        const skillDesc = parts.slice(1).join(':').trim() || 'Mastery checklist item';
+        return {
+          id: `${editingId || 'custom-tool'}-skill-${idx}-${Date.now()}`,
+          name: skillName,
+          description: skillDesc
+        };
+      });
+
+    let updatedList: EDATool[];
+
+    if (editingId) {
+      updatedList = tools.map(t => {
+        if (t.id === editingId) {
+          return {
+            ...t,
+            name: formData.name.trim(),
+            category: formData.category.trim() as any,
+            licenseType: formData.licenseType.trim(),
+            description: formData.description.trim(),
+            standardCommand: formData.standardCommand.trim() || undefined,
+            documentationUrl: formData.documentationUrl.trim() || undefined,
+            keySkillsToMaster: parsedSkills.length > 0 ? parsedSkills : t.keySkillsToMaster
+          };
+        }
+        return t;
+      });
+    } else {
+      const newTool: EDATool = {
+        id: `custom-tool-${Date.now()}`,
+        name: formData.name.trim(),
+        category: formData.category.trim() as any,
+        licenseType: formData.licenseType.trim(),
+        description: formData.description.trim(),
+        standardCommand: formData.standardCommand.trim() || undefined,
+        documentationUrl: formData.documentationUrl.trim() || undefined,
+        keySkillsToMaster: parsedSkills.length > 0 ? parsedSkills : [
+          {
+            id: `skill-${Date.now()}-1`,
+            name: 'Basic Setup & Execution',
+            description: 'Run tool in command line or GUI with test inputs'
+          }
+        ]
+      };
+      updatedList = [newTool, ...tools];
+    }
+
+    setTools(updatedList);
+    saveStoredTools(updatedList);
+    setIsModalOpen(false);
   };
 
   const handleReset = () => {
@@ -146,10 +271,18 @@ export const ToolsMasterView: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <button
+              onClick={handleOpenAdd}
+              className="px-2.5 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Toolchain</span>
+            </button>
+
             <button
               onClick={handleReset}
-              className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-2.5 sm:px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset</span>
@@ -203,11 +336,30 @@ export const ToolsMasterView: React.FC = () => {
                     </h3>
                   </div>
 
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-neutral-900">
-                      {masteredCount}/{toolSkills.length}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 block">Skills Mastered</span>
+                  <div className="flex items-start gap-2">
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-neutral-900">
+                        {masteredCount}/{toolSkills.length}
+                      </span>
+                      <span className="text-[10px] text-neutral-500 block">Skills Mastered</span>
+                    </div>
+
+                    <div className="flex items-center gap-0.5 border-l border-neutral-200 pl-1.5 ml-1">
+                      <button
+                        onClick={(e) => handleOpenEdit(tool, e)}
+                        title="Edit Tool"
+                        className="p-1.5 text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteTool(tool.id, tool.name, e)}
+                        title="Delete Tool"
+                        className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -290,6 +442,156 @@ export const ToolsMasterView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Add / Edit Tool Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-neutral-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-neutral-200 flex items-center justify-between bg-neutral-50/50">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                  {editingId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-neutral-900">
+                    {editingId ? 'Edit EDA Toolchain' : 'Add EDA Toolchain'}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Configure EDA tool name, category, license, execution command, and mastery checklist.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveTool} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Tool Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Cocotb / Verilator / OpenROAD"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Category <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Simulation & Verification"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    License / Access Tier
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Open Source / Academic / Commercial"
+                    value={formData.licenseType}
+                    onChange={(e) => setFormData({ ...formData, licenseType: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-neutral-800">
+                    Documentation URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://docs.cocotb.org"
+                    value={formData.documentationUrl}
+                    onChange={(e) => setFormData({ ...formData, documentationUrl: e.target.value })}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800">
+                  Tool Description &amp; Silicon Industry Relevance <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Describe where and why this toolchain is deployed in modern silicon workflows..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-y"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800 flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Standard CLI Command / Run Snippet</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. pytest -v test_alu.py --waves"
+                  value={formData.standardCommand}
+                  onChange={(e) => setFormData({ ...formData, standardCommand: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-950 text-cyan-300 font-mono border border-neutral-800 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-neutral-800 block">
+                  Key Skills Checklist (One skill per line: <span className="font-mono text-neutral-500">Skill Name: Description</span>)
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder={"Clock Generation: Writing @cocotb.test async clock drivers\nConstrained Random: Generating stimulus packets with Scapy"}
+                  value={formData.skillsText}
+                  onChange={(e) => setFormData({ ...formData, skillsText: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-y font-mono"
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{editingId ? 'Save Changes' : 'Create Toolchain'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
