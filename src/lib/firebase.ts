@@ -129,13 +129,26 @@ export async function signInWithGoogle(): Promise<User | null> {
     }
     return null;
   } catch (error: any) {
-    // If popup is blocked by browser, or user is on mobile browser, fallback gracefully to redirect
-    if (error?.code === 'auth/popup-blocked') {
-      console.info('Popup blocked, attempting signInWithRedirect...');
-      await signInWithRedirect(auth, googleProvider);
+    // If user voluntarily closed the popup or cancelled, handle cleanly without error
+    if (
+      error?.code === 'auth/popup-closed-by-user' ||
+      error?.code === 'auth/cancelled-popup-request' ||
+      error?.code === 'auth/user-cancelled'
+    ) {
       return null;
     }
-    console.error('Error signing in with Google:', error);
+
+    // If popup is blocked by browser, or user is on mobile browser, fallback gracefully to redirect
+    if (error?.code === 'auth/popup-blocked') {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr) {
+        console.warn('Redirect sign-in error:', redirectErr);
+      }
+      return null;
+    }
+
+    console.warn('Google sign-in attempt did not complete:', error?.code || error?.message);
     throw error;
   }
 }

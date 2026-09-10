@@ -142,8 +142,10 @@ export default function App() {
     isAdmin,
     isSyncing,
     lastSyncedAt,
+    authError,
     login,
     logout,
+    clearAuthError,
     syncToCloud
   } = useAuth();
 
@@ -841,6 +843,26 @@ export default function App() {
 
         {/* Main Content Workspace (padded bottom on mobile to accommodate bottom nav bar) */}
         <main className="flex-1 p-3.5 sm:p-6 md:p-8 lg:p-10 max-w-6xl mx-auto overflow-y-auto w-full transition-all pb-24 md:pb-12">
+          {/* Authentication Alert Banner (Dismissible) */}
+          {authError && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs flex items-start justify-between gap-3 animate-in fade-in duration-150">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <div className="font-bold text-amber-950">Authentication Notice</div>
+                  <div className="text-amber-800 leading-relaxed">{authError.message}</div>
+                </div>
+              </div>
+              <button
+                onClick={clearAuthError}
+                className="text-amber-600 hover:text-amber-900 p-1 rounded-lg hover:bg-amber-100 transition-colors cursor-pointer shrink-0 text-xs font-semibold"
+                title="Dismiss message"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <div className="animate-in fade-in duration-200">
               <DashboardOverview onNavigate={(tab) => handleTabChange(tab as any)} />

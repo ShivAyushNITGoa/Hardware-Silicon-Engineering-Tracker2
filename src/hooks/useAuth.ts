@@ -204,8 +204,12 @@ export function useAuth() {
       }
       return user;
     } catch (err: any) {
-      if (err?.code === 'auth/popup-closed-by-user') {
-        // User voluntarily closed popup
+      if (
+        err?.code === 'auth/popup-closed-by-user' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        err?.code === 'auth/user-cancelled'
+      ) {
+        // User voluntarily closed or cancelled popup
         return null;
       }
 
@@ -221,7 +225,7 @@ export function useAuth() {
         message,
         domain
       });
-      throw err;
+      return null;
     }
   };
 
