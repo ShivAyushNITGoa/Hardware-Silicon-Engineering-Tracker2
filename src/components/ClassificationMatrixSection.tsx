@@ -31,13 +31,19 @@ import {
   Table,
   LayoutGrid,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Edit3,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
-import { MASTER_SUBDOMAINS, getSubdomainsBySuperDomain, ALL_SUBDOMAINS } from '../data/classificationData';
+import { MASTER_SUBDOMAINS, ALL_SUBDOMAINS } from '../data/classificationData';
 import { ClassificationType, SubdomainDetail, JobProfileClassification, SkillProfileClassification, KnowledgeProfileClassification } from '../types';
 import { SUBDOMAIN_DOSSIERS } from '../data/subdomains/dossierData';
 import { ClassificationDossierModal } from './ClassificationDossierModal';
 import { SubdomainComparatorModal } from './SubdomainComparatorModal';
+import { SubdomainModal } from './SubdomainModal';
+import { getStoredSubdomains, saveStoredSubdomains, resetStoredSubdomains } from '../utils/storage';
 
 interface ClassificationMatrixSectionProps {
   onNavigateToCurriculum?: () => void;
@@ -54,6 +60,7 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
   onNavigateToTools,
   compactMode = false
 }) => {
+  const [subdomains, setSubdomains] = useState<SubdomainDetail[]>(() => getStoredSubdomains());
   const [selectedDomain, setSelectedDomain] = useState<'all' | 'vlsi' | 'embedded'>('all');
   const [selectedSubdomainId, setSelectedSubdomainId] = useState<string>('frontend');
   const [activeClassification, setActiveClassification] = useState<ClassificationType>('all');
@@ -69,20 +76,67 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
   const [inspectDossierId, setInspectDossierId] = useState<string | null>(null);
   const [isComparatorOpen, setIsComparatorOpen] = useState<boolean>(false);
   const [hasCopiedMatrix, setHasCopiedMatrix] = useState<boolean>(false);
+  const [isSubdomainModalOpen, setIsSubdomainModalOpen] = useState<boolean>(false);
+  const [editingSubdomain, setEditingSubdomain] = useState<SubdomainDetail | null>(null);
 
   // Filter available subdomains based on domain
   const availableSubdomains = useMemo(() => {
-    return getSubdomainsBySuperDomain(selectedDomain);
-  }, [selectedDomain]);
+    if (selectedDomain === 'all') return subdomains;
+    return subdomains.filter(sd => sd.domainId === selectedDomain);
+  }, [subdomains, selectedDomain]);
 
   // Ensure selected subdomain is valid across all subdomains
   const currentSubdomain: SubdomainDetail = useMemo(() => {
     let found = availableSubdomains.find(s => s.id === selectedSubdomainId);
     if (found) return found;
-    found = ALL_SUBDOMAINS.find(s => s.id === selectedSubdomainId);
+    found = subdomains.find(s => s.id === selectedSubdomainId);
     if (found) return found;
-    return availableSubdomains[0] || MASTER_SUBDOMAINS[0];
-  }, [availableSubdomains, selectedSubdomainId]);
+    return availableSubdomains[0] || subdomains[0] || MASTER_SUBDOMAINS[0];
+  }, [availableSubdomains, selectedSubdomainId, subdomains]);
+
+  // CRUD Handlers for Subdomains
+  const handleOpenAddSubdomain = () => {
+    setEditingSubdomain(null);
+    setIsSubdomainModalOpen(true);
+  };
+
+  const handleOpenEditSubdomain = (sub: SubdomainDetail, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingSubdomain(sub);
+    setIsSubdomainModalOpen(true);
+  };
+
+  const handleSaveSubdomain = (saved: SubdomainDetail) => {
+    let updated: SubdomainDetail[];
+    if (editingSubdomain) {
+      updated = subdomains.map(s => s.id === saved.id ? saved : s);
+    } else {
+      updated = [saved, ...subdomains];
+    }
+    setSubdomains(updated);
+    saveStoredSubdomains(updated);
+    setSelectedSubdomainId(saved.id);
+  };
+
+  const handleDeleteSubdomain = (id: string, name: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (window.confirm(`Delete subdomain "${name}"? This action will remove its cards and matrix entries.`)) {
+      const updated = subdomains.filter(s => s.id !== id);
+      setSubdomains(updated);
+      saveStoredSubdomains(updated);
+      if (selectedSubdomainId === id && updated.length > 0) {
+        setSelectedSubdomainId(updated[0].id);
+      }
+    }
+  };
+
+  const handleResetSubdomains = () => {
+    if (window.confirm('Reset all subdomains to factory defaults? Any custom subdomains or edits will be restored to initial standards.')) {
+      const restored = resetStoredSubdomains();
+      setSubdomains(restored);
+      setSelectedSubdomainId(restored[0]?.id || 'frontend');
+    }
+  };
 
   // Filtered jobs, skills, knowledge matching search
   const filteredJobs = useMemo(() => {
@@ -389,14 +443,34 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
           </button>
         </div>
 
-        {/* Technical Dossier Quick Access Trigger */}
-        <button
-          onClick={() => setInspectDossierId(currentSubdomain.id)}
-          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors self-start sm:self-auto shadow-xs"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-          <span>Inspect {currentSubdomain.name.split(' ')[0]} Dossier</span>
-        </button>
+        {/* Actions bar: Add, Edit, Inspect, Reset */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={handleOpenAddSubdomain}
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+            title="Add a custom engineering subdomain"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Subdomain</span>
+          </button>
+
+          <button
+            onClick={() => handleOpenEditSubdomain(currentSubdomain)}
+            className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white hover:bg-neutral-100 text-neutral-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            title="Edit currently selected subdomain"
+          >
+            <Edit3 className="w-3.5 h-3.5 text-neutral-500" />
+            <span>Edit Current</span>
+          </button>
+
+          <button
+            onClick={() => setInspectDossierId(currentSubdomain.id)}
+            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Inspect {currentSubdomain.name.split(' ')[0]} Dossier</span>
+          </button>
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -441,7 +515,7 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-200">
-                {ALL_SUBDOMAINS.map((sub, idx) => {
+                {subdomains.map((sub, idx) => {
                   const dossier = SUBDOMAIN_DOSSIERS[sub.id];
                   return (
                     <tr key={sub.id} className={idx % 2 === 0 ? 'bg-white hover:bg-neutral-50' : 'bg-neutral-50/60 hover:bg-neutral-100/60'}>
@@ -477,7 +551,23 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
                       <td className="p-3 text-rose-800 font-medium max-w-[200px] truncate" title={dossier?.siliconFailureCaseStudy.failureMode}>
                         {dossier ? dossier.siliconFailureCaseStudy.failureMode : 'Timing & functional hazards'}
                       </td>
-                      <td className="p-3 text-right whitespace-nowrap">
+                      <td className="p-3 text-right whitespace-nowrap space-x-1.5">
+                        <button
+                          onClick={() => handleOpenEditSubdomain(sub)}
+                          className="p-1 rounded hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition-colors inline-flex items-center"
+                          title="Edit Subdomain"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        {subdomains.length > 1 && (
+                          <button
+                            onClick={(e) => handleDeleteSubdomain(sub.id, sub.name, e)}
+                            className="p-1 rounded hover:bg-rose-100 text-rose-500 hover:text-rose-700 transition-colors inline-flex items-center"
+                            title="Delete Subdomain"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setInspectDossierId(sub.id)}
                           className="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 text-white text-[11px] font-semibold cursor-pointer transition-colors"
@@ -822,7 +912,7 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>All Domains ({MASTER_SUBDOMAINS.length})</span>
+              <span>All Domains ({subdomains.length})</span>
             </button>
 
             <button
@@ -839,7 +929,7 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
               }`}
             >
               <Cpu className="w-3.5 h-3.5" />
-              <span>VLSI &amp; Silicon Design (5 Subdomains)</span>
+              <span>VLSI &amp; Silicon Design ({subdomains.filter(s => s.domainId === 'vlsi').length} Subdomains)</span>
             </button>
 
             <button
@@ -856,7 +946,7 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
-              <span>Embedded Systems &amp; Firmware (3 Subdomains)</span>
+              <span>Embedded Systems &amp; Firmware ({subdomains.filter(s => s.domainId === 'embedded').length} Subdomains)</span>
             </button>
           </div>
 
@@ -915,6 +1005,39 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
               <p className="text-xs text-neutral-600 mt-1 max-w-3xl">
                 {currentSubdomain.description}
               </p>
+
+              {/* Subdomain Management Action Controls */}
+              <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditSubdomain(currentSubdomain)}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-100 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                  title="Edit this subdomain's properties, job profile, or skills"
+                >
+                  <Edit3 className="w-3 h-3 text-neutral-500" />
+                  <span>Edit Subdomain</span>
+                </button>
+                {subdomains.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSubdomain(currentSubdomain.id, currentSubdomain.name, e)}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Delete this subdomain"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Delete</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleResetSubdomains}
+                  className="px-2 py-1 rounded-lg text-[11px] font-medium text-neutral-500 hover:text-neutral-800 hover:bg-neutral-200/60 flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Reset all subdomains to factory defaults"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset All</span>
+                </button>
+              </div>
             </div>
 
             {/* Level 3: Classification Selector (All | Job | Skill | Knowledge) */}
@@ -1378,6 +1501,19 @@ export const ClassificationMatrixSection: React.FC<ClassificationMatrixSectionPr
             setIsComparatorOpen(false);
             setInspectDossierId(id);
           }}
+        />
+      )}
+
+      {/* Subdomain Add / Edit Modal */}
+      {isSubdomainModalOpen && (
+        <SubdomainModal
+          isOpen={isSubdomainModalOpen}
+          onClose={() => {
+            setIsSubdomainModalOpen(false);
+            setEditingSubdomain(null);
+          }}
+          onSave={handleSaveSubdomain}
+          initialSubdomain={editingSubdomain}
         />
       )}
     </div>

@@ -27,6 +27,7 @@ import { StudentCollegeProfile } from '../data/universalCollegeData';
 import { ECE_EEE_CAREER_FIELDS, EceEeeCareerField } from '../data/eceEeeCareersData';
 import { ECE_EEE_PREP_TRACKS, EceEeeFieldPrepTrack } from '../data/eceEeePrepData';
 import { ALL_SUBDOMAINS } from '../data/classificationData';
+import { NIT_GOA_VLSI_STRATEGY_DATA, AcademicSemesterPlan } from '../data/nitGoaRoadmapData';
 
 const STORAGE_KEYS = {
   CHECKED_SUBTOPICS: 'ayush_tracker_checked_subtopics',
@@ -65,7 +66,10 @@ const STORAGE_KEYS = {
   CUSTOM_ECE_EEE_TRACKS: 'ayush_tracker_custom_ece_eee_prep_tracks_v1',
   CUSTOM_ENCYCLOPEDIA_DOCS: 'ayush_tracker_custom_encyclopedia_docs_v1',
   CUSTOM_ENCYCLOPEDIA_NOTES: 'ayush_tracker_custom_encyclopedia_notes_v1',
-  CUSTOM_SUBDOMAINS: 'ayush_tracker_custom_subdomains_v1'
+  CUSTOM_SUBDOMAINS: 'ayush_tracker_custom_subdomains_v1',
+  CUSTOM_NIT_GOA_SEMESTERS: 'ayush_tracker_custom_nit_goa_semesters_v1',
+  CUSTOM_NIT_GOA_TARGET_SKILLS: 'ayush_tracker_custom_nit_goa_target_skills_v1',
+  CUSTOM_NIT_GOA_TARGET_ROLES: 'ayush_tracker_custom_nit_goa_target_roles_v1'
 };
 
 export const DEFAULT_STUDENT_PROFILE: StudentCollegeProfile = {
@@ -812,6 +816,9 @@ export interface UniversalUserDataBackup {
   customEncyclopediaDocs?: CustomEncyclopediaDoc[];
   customEncyclopediaNotes?: Record<string, string>;
   customSubdomains?: SubdomainDetail[];
+  customNitGoaSemesters?: AcademicSemesterPlan[];
+  customNitGoaTargetSkills?: string[];
+  customNitGoaTargetRoles?: string[];
 }
 
 export function exportAllUniversalUserData(): string {
@@ -833,7 +840,10 @@ export function exportAllUniversalUserData(): string {
     customEceEeeTracks: getStoredEceEeeTracks(),
     customEncyclopediaDocs: getStoredCustomEncyclopediaDocs(),
     customEncyclopediaNotes: getStoredEncyclopediaDocNotes(),
-    customSubdomains: getStoredSubdomains()
+    customSubdomains: getStoredSubdomains(),
+    customNitGoaSemesters: getStoredNitGoaSemesters(),
+    customNitGoaTargetSkills: getStoredNitGoaTargetSkills(),
+    customNitGoaTargetRoles: getStoredNitGoaTargetRoles()
   };
   return JSON.stringify(backup, null, 2);
 }
@@ -859,6 +869,9 @@ export function importUniversalUserData(jsonString: string): { success: boolean;
     if (data.customEncyclopediaDocs && Array.isArray(data.customEncyclopediaDocs)) saveStoredCustomEncyclopediaDocs(data.customEncyclopediaDocs);
     if (data.customEncyclopediaNotes) saveStoredEncyclopediaDocNotes(data.customEncyclopediaNotes);
     if (data.customSubdomains && Array.isArray(data.customSubdomains)) saveStoredSubdomains(data.customSubdomains);
+    if (data.customNitGoaSemesters && Array.isArray(data.customNitGoaSemesters)) saveStoredNitGoaSemesters(data.customNitGoaSemesters);
+    if (data.customNitGoaTargetSkills && Array.isArray(data.customNitGoaTargetSkills)) saveStoredNitGoaTargetSkills(data.customNitGoaTargetSkills);
+    if (data.customNitGoaTargetRoles && Array.isArray(data.customNitGoaTargetRoles)) saveStoredNitGoaTargetRoles(data.customNitGoaTargetRoles);
 
     return { success: true, message: 'Universal user data imported and restored successfully.' };
   } catch (err: any) {
@@ -1058,6 +1071,86 @@ export function resetStoredSubdomains(): SubdomainDetail[] {
     console.error('Failed to reset subdomains:', e);
   }
   return ALL_SUBDOMAINS;
+}
+
+// --- NIT Goa Semesters & Roadmap Targets Persistence ---
+
+export function getStoredNitGoaSemesters(): AcademicSemesterPlan[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_NIT_GOA_SEMESTERS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to read custom NIT Goa semesters', e);
+  }
+  return NIT_GOA_VLSI_STRATEGY_DATA.semesters;
+}
+
+export function saveStoredNitGoaSemesters(semesters: AcademicSemesterPlan[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_NIT_GOA_SEMESTERS, JSON.stringify(semesters));
+    notifyStorageChange();
+  } catch (e) {
+    console.error('Failed to save custom NIT Goa semesters', e);
+  }
+}
+
+export function resetStoredNitGoaSemesters(): AcademicSemesterPlan[] {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_NIT_GOA_SEMESTERS);
+    notifyStorageChange();
+  } catch (e) {}
+  return NIT_GOA_VLSI_STRATEGY_DATA.semesters;
+}
+
+export function getStoredNitGoaTargetSkills(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_NIT_GOA_TARGET_SKILLS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return NIT_GOA_VLSI_STRATEGY_DATA.targetGraduationProfile;
+}
+
+export function saveStoredNitGoaTargetSkills(skills: string[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_NIT_GOA_TARGET_SKILLS, JSON.stringify(skills));
+    notifyStorageChange();
+  } catch (e) {}
+}
+
+export function getStoredNitGoaTargetRoles(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_NIT_GOA_TARGET_ROLES);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return NIT_GOA_VLSI_STRATEGY_DATA.targetRoles;
+}
+
+export function saveStoredNitGoaTargetRoles(roles: string[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_NIT_GOA_TARGET_ROLES, JSON.stringify(roles));
+    notifyStorageChange();
+  } catch (e) {}
+}
+
+export function resetStoredNitGoaTargets(): { skills: string[]; roles: string[] } {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_NIT_GOA_TARGET_SKILLS);
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_NIT_GOA_TARGET_ROLES);
+    notifyStorageChange();
+  } catch (e) {}
+  return {
+    skills: NIT_GOA_VLSI_STRATEGY_DATA.targetGraduationProfile,
+    roles: NIT_GOA_VLSI_STRATEGY_DATA.targetRoles
+  };
 }
 
 

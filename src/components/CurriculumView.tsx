@@ -97,6 +97,7 @@ export const CurriculumView: React.FC = () => {
 
   // Track Modal State
   const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<CurriculumTrack | null>(null);
   const [trackForm, setTrackForm] = useState<CurriculumTrack>(BLANK_TRACK);
 
   const toggleSubtopic = (subtopicId: string) => {
@@ -369,12 +370,21 @@ export const CurriculumView: React.FC = () => {
     }
   };
 
-  // Open Track Modal
+  // Open Track Modal for Add
   const handleOpenAddTrack = () => {
+    setEditingTrack(null);
     setTrackForm({
       ...BLANK_TRACK,
       id: `track-${Date.now()}`
     });
+    setIsTrackModalOpen(true);
+  };
+
+  // Open Track Modal for Edit
+  const handleOpenEditTrack = (track: CurriculumTrack, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingTrack(track);
+    setTrackForm({ ...track });
     setIsTrackModalOpen(true);
   };
 
@@ -383,17 +393,32 @@ export const CurriculumView: React.FC = () => {
     e.preventDefault();
     if (!trackForm.name.trim()) return;
 
-    const newTrack: CurriculumTrack = {
-      ...trackForm,
-      name: trackForm.name.trim(),
-      topics: []
-    };
+    let updatedTracks: CurriculumTrack[];
+    if (editingTrack) {
+      updatedTracks = curriculumTracks.map(t => 
+        t.id === editingTrack.id
+          ? {
+              ...t,
+              ...trackForm,
+              name: trackForm.name.trim(),
+              topics: t.topics
+            }
+          : t
+      );
+    } else {
+      const newTrack: CurriculumTrack = {
+        ...trackForm,
+        name: trackForm.name.trim(),
+        topics: []
+      };
+      updatedTracks = [...curriculumTracks, newTrack];
+    }
 
-    const updatedTracks = [...curriculumTracks, newTrack];
     setCurriculumTracks(updatedTracks);
     saveStoredCurriculum(updatedTracks);
-    setActiveTrackId(newTrack.id);
+    setActiveTrackId(trackForm.id);
     setIsTrackModalOpen(false);
+    setEditingTrack(null);
   };
 
   // Delete Track
@@ -718,6 +743,14 @@ export const CurriculumView: React.FC = () => {
                   </div>
                 </button>
 
+                <button
+                  onClick={(e) => handleOpenEditTrack(track, e)}
+                  className={`px-1.5 py-2.5 transition-colors cursor-pointer ${isSelected ? 'text-neutral-400 hover:text-white' : 'text-neutral-400 hover:text-neutral-800'}`}
+                  title="Edit Track Metadata"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+
                 {curriculumTracks.length > 1 && (
                   <button
                     onClick={() => handleDeleteTrack(track.id, track.name)}
@@ -768,6 +801,14 @@ export const CurriculumView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <button
+              onClick={() => handleOpenEditTrack(activeTrack)}
+              className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer shrink-0 flex items-center gap-1 shadow-2xs"
+              title="Edit current track details"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-neutral-500" />
+              <span>Edit Track</span>
+            </button>
             <button
               onClick={() => handleMarkTrack(true)}
               className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer shrink-0"
@@ -1353,12 +1394,19 @@ export const CurriculumView: React.FC = () => {
                   <Layers className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-neutral-900">Create New Curriculum Track</h3>
-                  <p className="text-xs text-neutral-500">Define a custom focus domain</p>
+                  <h3 className="text-base font-bold text-neutral-900">
+                    {editingTrack ? 'Edit Curriculum Track' : 'Create New Curriculum Track'}
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    {editingTrack ? 'Update track details, focus, and next exit gate' : 'Define a custom focus domain'}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setIsTrackModalOpen(false)}
+                onClick={() => {
+                  setIsTrackModalOpen(false);
+                  setEditingTrack(null);
+                }}
                 className="p-1.5 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1429,7 +1477,10 @@ export const CurriculumView: React.FC = () => {
               <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsTrackModalOpen(false)}
+                  onClick={() => {
+                    setIsTrackModalOpen(false);
+                    setEditingTrack(null);
+                  }}
                   className="px-4 py-2 text-xs font-semibold text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
@@ -1439,7 +1490,7 @@ export const CurriculumView: React.FC = () => {
                   className="px-5 py-2 text-xs font-bold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <Save className="w-4 h-4" />
-                  Create Track
+                  {editingTrack ? 'Save Changes' : 'Create Track'}
                 </button>
               </div>
             </form>

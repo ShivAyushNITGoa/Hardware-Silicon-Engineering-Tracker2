@@ -31,7 +31,11 @@ import {
   HelpCircle,
   Wrench,
   Flame,
-  Clock
+  Clock,
+  Plus,
+  Edit3,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { 
   NIT_GOA_VLSI_STRATEGY_DATA, 
@@ -45,8 +49,23 @@ import {
   getNitGoaElectives, 
   saveNitGoaElectives,
   getStudentCollegeProfile,
-  saveStudentCollegeProfile
+  saveStudentCollegeProfile,
+  getStoredNitGoaSemesters,
+  saveStoredNitGoaSemesters,
+  resetStoredNitGoaSemesters,
+  getStoredNitGoaTargetSkills,
+  saveStoredNitGoaTargetSkills,
+  getStoredNitGoaTargetRoles,
+  saveStoredNitGoaTargetRoles,
+  resetStoredNitGoaTargets
 } from '../utils/storage';
+import { 
+  NitGoaElectiveModal,
+  NitGoaMilestoneModal,
+  NitGoaTargetsModal,
+  ElectiveFormData,
+  MilestoneFormData
+} from './NitGoaModals';
 import { 
   StudentCollegeProfile,
   UNIVERSAL_COLLEGE_TIERS,
@@ -101,12 +120,192 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
   const [isCollegeSelectorOpen, setIsCollegeSelectorOpen] = useState(false);
   const [nitProgress, setNitProgress] = useState<Record<string, boolean>>(() => getNitGoaProgress());
   const [nitElectives, setNitElectives] = useState<Record<string, 'selected' | 'completed' | 'planned'>>(() => getNitGoaElectives());
+  const [semesters, setSemesters] = useState<AcademicSemesterPlan[]>(() => getStoredNitGoaSemesters());
+  const [targetSkills, setTargetSkills] = useState<string[]>(() => getStoredNitGoaTargetSkills());
+  const [targetRoles, setTargetRoles] = useState<string[]>(() => getStoredNitGoaTargetRoles());
+
+  // Modals state
+  const [isElectiveModalOpen, setIsElectiveModalOpen] = useState(false);
+  const [selectedElectiveSem, setSelectedElectiveSem] = useState<number>(6);
+  const [editingElective, setEditingElective] = useState<any>(null);
+
+  const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
+  const [selectedMilestoneSem, setSelectedMilestoneSem] = useState<number>(6);
+  const [editingMilestone, setEditingMilestone] = useState<any>(null);
+
+  const [isTargetsModalOpen, setIsTargetsModalOpen] = useState(false);
+
   const [expandedSemester, setExpandedSemester] = useState<number>(6);
   const [showFullProfile, setShowFullProfile] = useState(false);
   const [selectedSpecialization, setSelectedSpecialization] = useState<string>('all');
   const [hasCopiedReport, setHasCopiedReport] = useState(false);
   const [showElectiveCalculator, setShowElectiveCalculator] = useState(false);
   const [companyDirectoryCategory, setCompanyDirectoryCategory] = useState<string>('all');
+
+  const availableSemesters = semesters.map(s => ({
+    number: s.semesterNumber,
+    label: `${s.semesterNumber}th Semester (${s.semester})`
+  }));
+
+  // Elective Add / Edit Handlers
+  const handleOpenAddElective = (semNum: number) => {
+    setSelectedElectiveSem(semNum);
+    setEditingElective(null);
+    setIsElectiveModalOpen(true);
+  };
+
+  const handleOpenEditElective = (semNum: number, elective: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedElectiveSem(semNum);
+    setEditingElective(elective);
+    setIsElectiveModalOpen(true);
+  };
+
+  const handleSaveElective = (semNum: number, data: ElectiveFormData, originalCode?: string) => {
+    const learningItems = data.expectedLearningText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    const updated = semesters.map(sem => {
+      if (sem.semesterNumber === semNum) {
+        let updatedElectives;
+        if (originalCode) {
+          updatedElectives = sem.recommendedElectives.map(el => 
+            el.code === originalCode
+              ? {
+                  ...el,
+                  code: data.code,
+                  name: data.name,
+                  category: data.category,
+                  priority: data.priority,
+                  reason: data.reason,
+                  expectedLearning: learningItems
+                }
+              : el
+          );
+        } else {
+          updatedElectives = [
+            ...sem.recommendedElectives,
+            {
+              code: data.code,
+              name: data.name,
+              category: data.category,
+              priority: data.priority,
+              reason: data.reason,
+              expectedLearning: learningItems
+            }
+          ];
+        }
+        return { ...sem, recommendedElectives: updatedElectives };
+      }
+      return sem;
+    });
+
+    setSemesters(updated);
+    saveStoredNitGoaSemesters(updated);
+    setIsElectiveModalOpen(false);
+    setEditingElective(null);
+  };
+
+  const handleDeleteElective = (semNum: number, code: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const updated = semesters.map(sem => {
+      if (sem.semesterNumber === semNum) {
+        return {
+          ...sem,
+          recommendedElectives: sem.recommendedElectives.filter(el => el.code !== code)
+        };
+      }
+      return sem;
+    });
+    setSemesters(updated);
+    saveStoredNitGoaSemesters(updated);
+  };
+
+  // Milestone Add / Edit Handlers
+  const handleOpenAddMilestone = (semNum: number) => {
+    setSelectedMilestoneSem(semNum);
+    setEditingMilestone(null);
+    setIsMilestoneModalOpen(true);
+  };
+
+  const handleOpenEditMilestone = (semNum: number, milestone: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedMilestoneSem(semNum);
+    setEditingMilestone(milestone);
+    setIsMilestoneModalOpen(true);
+  };
+
+  const handleSaveMilestone = (semNum: number, data: MilestoneFormData, originalId?: string) => {
+    const updated = semesters.map(sem => {
+      if (sem.semesterNumber === semNum) {
+        let updatedSkills;
+        if (originalId) {
+          updatedSkills = sem.timelineSkills.map(sk => 
+            sk.id === originalId
+              ? {
+                  ...sk,
+                  title: data.title,
+                  description: data.description,
+                  category: data.category
+                }
+              : sk
+          );
+        } else {
+          const newId = `milestone-${semNum}-${Date.now()}`;
+          updatedSkills = [
+            ...sem.timelineSkills,
+            {
+              id: newId,
+              title: data.title,
+              description: data.description,
+              category: data.category
+            }
+          ];
+        }
+        return { ...sem, timelineSkills: updatedSkills };
+      }
+      return sem;
+    });
+
+    setSemesters(updated);
+    saveStoredNitGoaSemesters(updated);
+    setIsMilestoneModalOpen(false);
+    setEditingMilestone(null);
+  };
+
+  const handleDeleteMilestone = (semNum: number, milestoneId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const updated = semesters.map(sem => {
+      if (sem.semesterNumber === semNum) {
+        return {
+          ...sem,
+          timelineSkills: sem.timelineSkills.filter(sk => sk.id !== milestoneId)
+        };
+      }
+      return sem;
+    });
+    setSemesters(updated);
+    saveStoredNitGoaSemesters(updated);
+  };
+
+  // Target Profile Handlers
+  const handleSaveTargets = (skills: string[], roles: string[]) => {
+    setTargetSkills(skills);
+    setTargetRoles(roles);
+    saveStoredNitGoaTargetSkills(skills);
+    saveStoredNitGoaTargetRoles(roles);
+    setIsTargetsModalOpen(false);
+  };
+
+  const handleResetSemestersToDefaults = () => {
+    const reset = resetStoredNitGoaSemesters();
+    setSemesters(reset);
+    const resetTargets = resetStoredNitGoaTargets();
+    setTargetSkills(resetTargets.skills);
+    setTargetRoles(resetTargets.roles);
+  };
 
   const handleSaveProfile = (newProfile: StudentCollegeProfile) => {
     setStudentProfile(newProfile);
@@ -512,7 +711,7 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
             <TargetIcon className="w-3.5 h-3.5 text-neutral-700" />
             6. Final Skill Stack:
           </span>
-          {NIT_GOA_VLSI_STRATEGY_DATA.targetGraduationProfile.slice(0, 5).map((item, idx) => (
+          {targetSkills.slice(0, 5).map((item, idx) => (
             <span 
               key={idx}
               className="px-2 py-0.5 rounded-md bg-white border border-neutral-200 text-neutral-700 font-medium text-[11px]"
@@ -520,19 +719,32 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
               {item}
             </span>
           ))}
-          <span className="text-[11px] text-neutral-500 font-medium">+{NIT_GOA_VLSI_STRATEGY_DATA.targetGraduationProfile.length - 5} more</span>
+          {targetSkills.length > 5 && (
+            <span className="text-[11px] text-neutral-500 font-medium">+{targetSkills.length - 5} more</span>
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-bold text-neutral-500 text-[11px] uppercase tracking-wider">Target Roles:</span>
-          {NIT_GOA_VLSI_STRATEGY_DATA.targetRoles.map((role, idx) => (
-            <span 
-              key={idx}
-              className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold text-[10px]"
-            >
-              {role}
-            </span>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-bold text-neutral-500 text-[11px] uppercase tracking-wider">Target Roles:</span>
+            {targetRoles.map((role, idx) => (
+              <span 
+                key={idx}
+                className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold text-[10px]"
+              >
+                {role}
+              </span>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setIsTargetsModalOpen(true)}
+            className="px-2.5 py-1 text-[11px] font-semibold text-neutral-700 bg-white hover:bg-neutral-100 border border-neutral-300 rounded-md transition-colors flex items-center gap-1 cursor-pointer shadow-2xs shrink-0"
+            title="Edit target graduation skills and roles"
+          >
+            <Edit3 className="w-3 h-3 text-neutral-500" />
+            <span>Edit Targets</span>
+          </button>
         </div>
       </div>
 
@@ -711,9 +923,43 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
             </div>
           </div>
 
+          {/* Semesters Cards Action Bar */}
+          <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-indigo-600" />
+              <span>4. Academic Semesters &amp; Elective Strategy</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleOpenAddElective(expandedSemester || 6)}
+                className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Elective</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenAddMilestone(expandedSemester || 6)}
+                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Milestone</span>
+              </button>
+
+              <button
+                onClick={handleResetSemestersToDefaults}
+                className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                title="Reset semesters and milestones to curriculum defaults"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           {/* Semesters Cards (Section 4) */}
           <div className="space-y-4">
-            {NIT_GOA_VLSI_STRATEGY_DATA.semesters.map(sem => {
+            {semesters.map(sem => {
               const isExpanded = expandedSemester === sem.semesterNumber;
               return (
                 <div 
@@ -770,8 +1016,17 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
 
                       {/* Electives Grid */}
                       <div className="space-y-3">
-                        <div className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                          Recommended Elective Curriculum Selection:
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                            Recommended Elective Curriculum Selection:
+                          </div>
+                          <button
+                            onClick={() => handleOpenAddElective(sem.semesterNumber)}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Elective to Sem {sem.semesterNumber}</span>
+                          </button>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -780,7 +1035,7 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
                             return (
                               <div 
                                 key={elective.code}
-                                className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/40 hover:bg-white hover:border-neutral-300 transition-all flex flex-col justify-between space-y-3"
+                                className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/40 hover:bg-white hover:border-neutral-300 transition-all flex flex-col justify-between space-y-3 relative group"
                               >
                                 <div className="space-y-1.5">
                                   <div className="flex items-start justify-between gap-2">
@@ -804,21 +1059,39 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
                                       </h5>
                                     </div>
 
-                                    {/* Interactive Status Toggle */}
-                                    <button
-                                      onClick={() => cycleElectiveStatus(elective.code)}
-                                      title="Click to cycle status: Planned -> Selected -> Completed"
-                                      className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                                        currentStatus === 'completed'
-                                          ? 'bg-emerald-600 text-white border-emerald-700'
-                                          : currentStatus === 'selected'
-                                          ? 'bg-indigo-600 text-white border-indigo-700'
-                                          : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
-                                      }`}
-                                    >
-                                      {currentStatus === 'completed' && <Check className="w-3 h-3" />}
-                                      <span className="capitalize">{currentStatus}</span>
-                                    </button>
+                                    {/* Action Buttons: Status + Edit + Delete */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        onClick={() => cycleElectiveStatus(elective.code)}
+                                        title="Click to cycle status: Planned -> Selected -> Completed"
+                                        className={`px-2 py-1 rounded-md text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                                          currentStatus === 'completed'
+                                            ? 'bg-emerald-600 text-white border-emerald-700'
+                                            : currentStatus === 'selected'
+                                            ? 'bg-indigo-600 text-white border-indigo-700'
+                                            : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-100'
+                                        }`}
+                                      >
+                                        {currentStatus === 'completed' && <Check className="w-3 h-3" />}
+                                        <span className="capitalize">{currentStatus}</span>
+                                      </button>
+
+                                      <button
+                                        onClick={(e) => handleOpenEditElective(sem.semesterNumber, elective, e)}
+                                        className="p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200 rounded transition-colors cursor-pointer"
+                                        title="Edit this elective"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+
+                                      <button
+                                        onClick={(e) => handleDeleteElective(sem.semesterNumber, elective.code, e)}
+                                        className="p-1 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                        title="Delete this elective"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   </div>
 
                                   <p className="text-xs text-neutral-600 leading-relaxed">
@@ -842,36 +1115,67 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
 
                       {/* Milestone Skills for this semester */}
                       <div className="pt-2">
-                        <div className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
-                          Key Semester Technical Milestones:
+                        <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                            Key Semester Technical Milestones:
+                          </div>
+                          <button
+                            onClick={() => handleOpenAddMilestone(sem.semesterNumber)}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Milestone to Sem {sem.semesterNumber}</span>
+                          </button>
                         </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {sem.timelineSkills.map(sk => {
                             const isDone = nitProgress[sk.id] || false;
                             return (
                               <div
                                 key={sk.id}
-                                onClick={() => toggleSkill(sk.id)}
-                                className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                                className={`p-3 rounded-lg border text-xs transition-all flex items-start justify-between gap-2.5 group ${
                                   isDone 
                                     ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
                                     : 'bg-white border-neutral-200 hover:border-neutral-300'
                                 }`}
                               >
-                                <div className="mt-0.5">
-                                  {isDone ? (
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                  ) : (
-                                    <Circle className="w-4 h-4 text-neutral-400" />
-                                  )}
+                                <div 
+                                  onClick={() => toggleSkill(sk.id)}
+                                  className="flex items-start gap-2.5 cursor-pointer flex-1"
+                                >
+                                  <div className="mt-0.5">
+                                    {isDone ? (
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                    ) : (
+                                      <Circle className="w-4 h-4 text-neutral-400" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className={`font-bold ${isDone ? 'text-emerald-900 line-through' : 'text-neutral-900'}`}>
+                                      {sk.title}
+                                    </div>
+                                    <div className="text-[11px] text-neutral-500 mt-0.5">
+                                      {sk.description}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div className={`font-bold ${isDone ? 'text-emerald-900 line-through' : 'text-neutral-900'}`}>
-                                    {sk.title}
-                                  </div>
-                                  <div className="text-[11px] text-neutral-500 mt-0.5">
-                                    {sk.description}
-                                  </div>
+
+                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(e) => handleOpenEditMilestone(sem.semesterNumber, sk, e)}
+                                    className="p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded transition-colors cursor-pointer"
+                                    title="Edit milestone"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleDeleteMilestone(sem.semesterNumber, sk.id, e)}
+                                    className="p-1 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                    title="Delete milestone"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
                                 </div>
                               </div>
                             );
@@ -1671,6 +1975,41 @@ export const NitGoaStrategySection: React.FC<NitGoaStrategySectionProps> = ({
         onClose={() => setIsCollegeSelectorOpen(false)}
         currentProfile={studentProfile}
         onSaveProfile={handleSaveProfile}
+      />
+
+      {/* Nit Goa Elective Add/Edit Modal */}
+      <NitGoaElectiveModal
+        isOpen={isElectiveModalOpen}
+        onClose={() => {
+          setIsElectiveModalOpen(false);
+          setEditingElective(null);
+        }}
+        onSave={handleSaveElective}
+        initialSemester={selectedElectiveSem}
+        initialData={editingElective}
+        availableSemesters={availableSemesters}
+      />
+
+      {/* Nit Goa Milestone Add/Edit Modal */}
+      <NitGoaMilestoneModal
+        isOpen={isMilestoneModalOpen}
+        onClose={() => {
+          setIsMilestoneModalOpen(false);
+          setEditingMilestone(null);
+        }}
+        onSave={handleSaveMilestone}
+        initialSemester={selectedMilestoneSem}
+        initialData={editingMilestone}
+        availableSemesters={availableSemesters}
+      />
+
+      {/* Nit Goa Targets Modal */}
+      <NitGoaTargetsModal
+        isOpen={isTargetsModalOpen}
+        onClose={() => setIsTargetsModalOpen(false)}
+        onSave={handleSaveTargets}
+        initialSkills={targetSkills}
+        initialRoles={targetRoles}
       />
     </div>
   );
