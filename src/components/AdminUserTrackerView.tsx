@@ -17,8 +17,7 @@ import {
   Clock,
   Activity,
   User as UserIcon,
-  LogIn,
-  Globe
+  LogIn
 } from 'lucide-react';
 import { UserProgressData, fetchAllUsersForAdmin, subscribeToAllUsersForAdmin, ADMIN_EMAIL } from '../lib/firebase';
 import { ECE_EEE_PREP_TRACKS } from '../data/eceEeePrepData';
@@ -27,14 +26,12 @@ interface AdminUserTrackerViewProps {
   onGoBack?: () => void;
   currentUserEmail?: string | null;
   onLogin?: () => void;
-  onOpenVercelGuide?: () => void;
 }
 
 export const AdminUserTrackerView: React.FC<AdminUserTrackerViewProps> = ({
   onGoBack,
   currentUserEmail,
-  onLogin,
-  onOpenVercelGuide
+  onLogin
 }) => {
   const [users, setUsers] = useState<UserProgressData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -207,17 +204,6 @@ export const AdminUserTrackerView: React.FC<AdminUserTrackerViewProps> = ({
 
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
-            {onOpenVercelGuide && (
-              <button
-                onClick={onOpenVercelGuide}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition-colors cursor-pointer active:scale-95"
-                title="View Vercel & Firebase Auth deployment guide"
-              >
-                <Globe className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Vercel / Auth Guide</span>
-              </button>
-            )}
-
             <button
               onClick={loadData}
               disabled={isLoading}
