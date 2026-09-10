@@ -3,6 +3,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { 
   auth, 
   signInWithGoogle, 
+  handleRedirectAuthResult,
   logOut as firebaseLogOut, 
   ADMIN_EMAIL, 
   syncUserProgressToCloud, 
@@ -43,6 +44,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [authError, setAuthError] = useState<{ code?: string; message: string; domain?: string } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -77,6 +79,18 @@ export function useAuth() {
       syncToCloud(currentUser);
     }, 1200);
   }, [currentUser, syncToCloud]);
+
+  // Check for returning from redirect login flow
+  useEffect(() => {
+    handleRedirectAuthResult().then(async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        await syncToCloud(user);
+      }
+    }).catch(err => {
+      console.warn('Redirect auth warning:', err);
+    });
+  }, [syncToCloud]);
 
   // Automatically listen to local changes across any tab/component
   useEffect(() => {
@@ -182,16 +196,47 @@ export function useAuth() {
   }, [collectLocalProgress]);
 
   const login = async () => {
-    const user = await signInWithGoogle();
-    if (user) {
-      await syncToCloud(user);
+    setAuthError(null);
+    try {
+      const user = await signInWithGoogle();
+      if (user) {
+        await syncToCloud(user);
+      }
+      return user;
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        // User voluntarily closed popup
+        return null;
+      }
+
+      const domain = typeof window !== 'undefined' ? window.location.hostname : '';
+      let message = err?.message || 'Failed to sign in with Google.';
+
+      if (err?.code === 'auth/unauthorized-domain') {
+        message = `Domain "${domain}" is not authorized for Google Sign-In in Firebase Console. Add this domain in Firebase Console > Authentication > Settings > Authorized domains.`;
+      }
+
+      setAuthError({
+        code: err?.code,
+        message,
+        domain
+      });
+      throw err;
     }
-    return user;
   };
 
   const logout = async () => {
-    await firebaseLogOut();
-    setCurrentUser(null);
+    try {
+      await firebaseLogOut();
+      setCurrentUser(null);
+      setAuthError(null);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
+  const clearAuthError = () => {
+    setAuthError(null);
   };
 
   return {
@@ -201,8 +246,10 @@ export function useAuth() {
     adminEmail: ADMIN_EMAIL,
     isSyncing,
     lastSyncedAt,
+    authError,
     login,
     logout,
+    clearAuthError,
     syncToCloud
   };
 }

@@ -3,6 +3,8 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User 
@@ -23,17 +25,20 @@ import firebaseConfigData from '../../firebase-applet-config.json';
 
 export const ADMIN_EMAIL = 'shivshivamxyz@gmail.com';
 
-const firebaseConfig = {
-  apiKey: firebaseConfigData.apiKey,
-  authDomain: firebaseConfigData.authDomain,
-  projectId: firebaseConfigData.projectId,
-  storageBucket: firebaseConfigData.storageBucket,
-  messagingSenderId: firebaseConfigData.messagingSenderId,
-  appId: firebaseConfigData.appId,
+// Support Vercel / production environment variables with fallback to bundled config
+export const FIREBASE_CONFIG = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigData?.apiKey || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigData?.authDomain || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigData?.projectId || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigData?.storageBucket || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigData?.messagingSenderId || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigData?.appId || '',
 };
 
+export const FIRESTORE_DATABASE_ID = import.meta.env.VITE_FIRESTORE_DATABASE_ID || firebaseConfigData?.firestoreDatabaseId || '';
+
 // Initialize Firebase App
-export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export const app = getApps().length > 0 ? getApp() : initializeApp(FIREBASE_CONFIG);
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
@@ -41,9 +46,22 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Initialize Firestore with configured database ID
-export const db: Firestore = firebaseConfigData.firestoreDatabaseId && firebaseConfigData.firestoreDatabaseId !== '(default)'
-  ? getFirestore(app, firebaseConfigData.firestoreDatabaseId)
+export const db: Firestore = FIRESTORE_DATABASE_ID && FIRESTORE_DATABASE_ID !== '(default)'
+  ? getFirestore(app, FIRESTORE_DATABASE_ID)
   : getFirestore(app);
+
+// Helper to provide clear guidance for Vercel deployment & Authorized Domains
+export function getVercelAuthDomainInfo() {
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isVercel = currentHostname.includes('vercel.app');
+  return {
+    currentHostname,
+    isVercel,
+    projectId: FIREBASE_CONFIG.projectId,
+    authDomain: FIREBASE_CONFIG.authDomain,
+    consoleAuthUrl: `https://console.firebase.google.com/project/${FIREBASE_CONFIG.projectId}/authentication/settings`
+  };
+}
 
 export interface UserProfile {
   uid: string;
@@ -101,7 +119,7 @@ export interface UserProgressData {
   };
 }
 
-// Sign in with Google
+// Sign in with Google (with automatic popup-blocked fallback to redirect)
 export async function signInWithGoogle(): Promise<User | null> {
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -111,8 +129,29 @@ export async function signInWithGoogle(): Promise<User | null> {
     }
     return null;
   } catch (error: any) {
+    // If popup is blocked by browser, or user is on mobile browser, fallback gracefully to redirect
+    if (error?.code === 'auth/popup-blocked') {
+      console.info('Popup blocked, attempting signInWithRedirect...');
+      await signInWithRedirect(auth, googleProvider);
+      return null;
+    }
     console.error('Error signing in with Google:', error);
     throw error;
+  }
+}
+
+// Check redirect auth result when returning from redirect sign-in
+export async function handleRedirectAuthResult(): Promise<User | null> {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      await syncUserProfile(result.user);
+      return result.user;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Redirect auth result check:', error);
+    return null;
   }
 }
 
